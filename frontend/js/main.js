@@ -13,7 +13,7 @@ import { createViewport, frameCameraToBounds, setPresetView } from './scene.js';
 import { createMaterials, applyFinish, buildCooler, preloadAssetLibrary } from './builder.js';
 import { renderPrice } from './pricing.js';
 import { calculateRefrigerationRequirements } from './RefrigerationSystem.js';
-import { apiCall } from './api-config.js';
+import { apiCall, API_BASE_URL } from './api-config.js';
 
 // Premium Features - Foundational
 import { ConfigurationManager } from './ConfigurationManager.js';
@@ -633,10 +633,26 @@ document.getElementById('requestQuoteBtn').addEventListener('click', async () =>
 
     // Open Shopify checkout in new tab (required when embedded in iframe)
     console.log('Opening checkout in new tab:', data.invoiceUrl);
-    window.open(data.invoiceUrl, '_blank');
+    const checkoutWindow = window.open(data.invoiceUrl, '_blank');
 
-    // Show success message
-    showToast('Opening checkout in new tab...');
+    // Check if popup was blocked
+    if (!checkoutWindow || checkoutWindow.closed || typeof checkoutWindow.closed == 'undefined') {
+      // Popup blocked - show manual link
+      showToast('Please allow popups, then click here to checkout');
+
+      // Create a temporary button to manually open checkout
+      const manualLink = document.createElement('a');
+      manualLink.href = data.invoiceUrl;
+      manualLink.target = '_blank';
+      manualLink.textContent = 'Open Checkout';
+      manualLink.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#00a885;color:white;padding:20px 40px;border-radius:8px;text-decoration:none;font-size:18px;z-index:10000;box-shadow:0 4px 12px rgba(0,0,0,0.3)';
+      document.body.appendChild(manualLink);
+
+      setTimeout(() => manualLink.remove(), 10000);
+    } else {
+      showToast('Opening checkout in new tab...');
+    }
+
     button.disabled = false;
     button.textContent = originalLabel;
   } catch (err) {
@@ -741,19 +757,71 @@ document.getElementById('screenshotBtn')?.addEventListener('click', async () => 
   }
 });
 
-// AR viewer - simplified to download GLB file
+// AR viewer - use Shopify's native AR viewer
 document.getElementById('arBtn')?.addEventListener('click', async () => {
   try {
-    showToast('Generating 3D model for AR viewing...');
+    const button = document.getElementById('arBtn');
+    const originalContent = button.innerHTML;
+    button.disabled = true;
+    button.textContent = 'Generating AR model...';
 
-    // Download the GLB file directly
-    const filename = `ameridoor-cooler-${CONFIG.width}x${CONFIG.depth}x${CONFIG.height}.glb`;
-    await arExporter.downloadGLB(coolerRoot, filename);
+    showToast('Preparing AR view...');
 
-    showToast('AR model downloaded! Open on your mobile device to view in augmented reality.');
+    // Export GLB
+    const blob = await arExporter.exportAsGLB(coolerRoot);
+
+    // Upload to backend to get a public URL
+    const formData = new FormData();
+    formData.append('model', blob, `cooler-${CONFIG.width}x${CONFIG.depth}x${CONFIG.height}.glb`);
+
+    const response = await fetch(`${API_BASE_URL}/api/ar/upload`, {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to upload AR model');
+    }
+
+    const data = await response.json();
+    const modelUrl = data.url;
+
+    // Use Shopify AR Quick Look or Scene Viewer
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+    if (isIOS) {
+      // iOS: Use AR Quick Look
+      const a = document.createElement('a');
+      a.rel = 'ar';
+      a.href = modelUrl;
+      a.appendChild(document.createElement('img'));
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      showToast('Opening AR Quick Look...');
+    } else if (isMobile) {
+      // Android: Use Scene Viewer
+      const intentUrl = `intent://arvr.google.com/scene-viewer/1.0?file=${encodeURIComponent(modelUrl)}&mode=ar_preferred#Intent;scheme=https;package=com.google.android.googlequicksearchbox;action=android.intent.action.VIEW;S.browser_fallback_url=https://developers.google.com/ar;end;`;
+      window.location.href = intentUrl;
+      showToast('Opening Scene Viewer...');
+    } else {
+      // Desktop: Download the GLB file with instructions
+      const downloadLink = document.createElement('a');
+      downloadLink.href = URL.createObjectURL(blob);
+      downloadLink.download = `ameridoor-cooler-${CONFIG.width}x${CONFIG.depth}x${CONFIG.height}.glb`;
+      downloadLink.click();
+      URL.revokeObjectURL(downloadLink.href);
+      showToast('AR model downloaded! Transfer to your mobile device to view in AR.');
+    }
+
+    button.disabled = false;
+    button.innerHTML = originalContent;
   } catch (err) {
     console.error('AR export failed:', err);
-    showToast(`Failed to export AR model: ${err.message}`);
+    showToast(`Failed to create AR view: ${err.message}`);
+    const button = document.getElementById('arBtn');
+    button.disabled = false;
   }
 });
 
