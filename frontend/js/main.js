@@ -791,27 +791,37 @@ document.getElementById('arBtn')?.addEventListener('click', async () => {
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
     if (isIOS) {
-      // iOS: Use AR Quick Look with proper MIME type handling
-      // Create a proper AR link that iOS recognizes
-      const a = document.createElement('a');
-      a.rel = 'ar';
-      a.href = modelUrl;
+      // iOS: Create a visible link that user must tap (iOS security requirement)
+      // Programmatic clicks don't work for AR Quick Look
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;';
 
-      // Add required image element for AR Quick Look
+      const message = document.createElement('div');
+      message.style.cssText = 'color:white;font-size:18px;text-align:center;padding:0 20px;';
+      message.textContent = 'Tap below to view your cooler in AR';
+
+      const arLink = document.createElement('a');
+      arLink.rel = 'ar';
+      arLink.href = modelUrl;
+      arLink.style.cssText = 'display:block;background:#00a885;color:white;padding:20px 60px;border-radius:12px;text-decoration:none;font-size:20px;font-weight:bold;box-shadow:0 4px 12px rgba(0,0,0,0.3);';
+      arLink.textContent = 'View in AR';
+
+      // Add required image for AR Quick Look
       const img = document.createElement('img');
       img.style.display = 'none';
-      a.appendChild(img);
+      arLink.appendChild(img);
 
-      // Append to body, click, and remove
-      document.body.appendChild(a);
+      const cancelBtn = document.createElement('button');
+      cancelBtn.textContent = 'Cancel';
+      cancelBtn.style.cssText = 'background:transparent;color:white;border:2px solid white;padding:15px 40px;border-radius:8px;font-size:16px;margin-top:20px;cursor:pointer;';
+      cancelBtn.onclick = () => document.body.removeChild(overlay);
 
-      // Use setTimeout to ensure the link is in the DOM before clicking
-      setTimeout(() => {
-        a.click();
-        setTimeout(() => document.body.removeChild(a), 100);
-      }, 100);
+      overlay.appendChild(message);
+      overlay.appendChild(arLink);
+      overlay.appendChild(cancelBtn);
+      document.body.appendChild(overlay);
 
-      showToast('Opening AR Quick Look...');
+      showToast('Tap the button to launch AR');
     } else if (isMobile) {
       // Android: Use Scene Viewer
       const intentUrl = `intent://arvr.google.com/scene-viewer/1.0?file=${encodeURIComponent(modelUrl)}&mode=ar_preferred#Intent;scheme=https;package=com.google.android.googlequicksearchbox;action=android.intent.action.VIEW;S.browser_fallback_url=https://developers.google.com/ar;end;`;
