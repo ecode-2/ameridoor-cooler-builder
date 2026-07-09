@@ -791,14 +791,26 @@ document.getElementById('arBtn')?.addEventListener('click', async () => {
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
     if (isIOS) {
-      // iOS: Use AR Quick Look
+      // iOS: Use AR Quick Look with proper MIME type handling
+      // Create a proper AR link that iOS recognizes
       const a = document.createElement('a');
       a.rel = 'ar';
       a.href = modelUrl;
-      a.appendChild(document.createElement('img'));
+
+      // Add required image element for AR Quick Look
+      const img = document.createElement('img');
+      img.style.display = 'none';
+      a.appendChild(img);
+
+      // Append to body, click, and remove
       document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+
+      // Use setTimeout to ensure the link is in the DOM before clicking
+      setTimeout(() => {
+        a.click();
+        setTimeout(() => document.body.removeChild(a), 100);
+      }, 100);
+
       showToast('Opening AR Quick Look...');
     } else if (isMobile) {
       // Android: Use Scene Viewer

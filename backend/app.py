@@ -467,12 +467,36 @@ def upload_ar_model():
         logger.info(f"Saved AR model: {filename}")
 
         base_url = request.host_url.rstrip('/')
-        model_url = f"{base_url}/static/ar/{filename}"
+        model_url = f"{base_url}/ar-models/{filename}"
 
         return jsonify({"url": model_url})
     except Exception as e:
         logger.error(f"Failed to save AR model: {e}")
         return jsonify({"error": "Failed to save model"}), 500
+
+
+@app.route("/ar-models/<filename>")
+def serve_ar_model(filename):
+    """Serve AR model files with proper MIME type for iOS AR Quick Look"""
+    from flask import send_from_directory, make_response
+
+    try:
+        response = make_response(send_from_directory(AR_MODELS_DIR, filename))
+
+        # Set proper MIME type for GLB files (iOS AR Quick Look)
+        if filename.endswith('.glb'):
+            response.headers['Content-Type'] = 'model/gltf-binary'
+        elif filename.endswith('.usdz'):
+            response.headers['Content-Type'] = 'model/vnd.usdz+zip'
+
+        # Allow cross-origin access for AR viewers
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+
+        return response
+    except Exception as e:
+        logger.error(f"Failed to serve AR model {filename}: {e}")
+        return jsonify({"error": "Model not found"}), 404
 
 
 @app.route("/api/ar/qr-code", methods=["POST"])
