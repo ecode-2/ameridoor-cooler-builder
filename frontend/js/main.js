@@ -608,24 +608,31 @@ document.getElementById('requestQuoteBtn').addEventListener('click', async () =>
     }
 
     button.textContent = 'Creating Checkout…';
+    console.log('Sending checkout request with payload:', payload);
+
     const response = await apiCall('/api/create-order', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
 
+    console.log('Checkout response status:', response.status);
+
     if (!response.ok) {
       const errBody = await response.json().catch(() => ({}));
+      console.error('Checkout failed with error:', errBody);
       throw new Error(errBody.error || `Server responded ${response.status}`);
     }
 
     const data = await response.json();
+    console.log('Checkout response data:', data);
 
     if (!data.success) {
       throw new Error(data.error || 'Failed to create checkout');
     }
 
     // Redirect to Shopify checkout
+    console.log('Redirecting to:', data.invoiceUrl);
     window.location.href = data.invoiceUrl;
   } catch (err) {
     console.error('Checkout creation failed:', err);
