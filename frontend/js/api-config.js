@@ -21,7 +21,7 @@ const getApiUrl = () => {
 
   // Production: Use Railway backend URL
   // REPLACE THIS WITH YOUR ACTUAL RAILWAY URL
-  return 'https://your-backend.railway.app';
+  return 'https://ameridoor-cooler-builder-production.up.railway.app';
 };
 
 export const API_BASE_URL = getApiUrl();
