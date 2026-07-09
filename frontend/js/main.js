@@ -741,14 +741,19 @@ document.getElementById('screenshotBtn')?.addEventListener('click', async () => 
   }
 });
 
-// AR viewer
+// AR viewer - simplified to download GLB file
 document.getElementById('arBtn')?.addEventListener('click', async () => {
   try {
-    await arExporter.launchAR(coolerRoot);
-    showPremiumToast('Launching AR viewer...', { type: 'info' });
+    showToast('Generating 3D model for AR viewing...');
+
+    // Download the GLB file directly
+    const filename = `ameridoor-cooler-${CONFIG.width}x${CONFIG.depth}x${CONFIG.height}.glb`;
+    await arExporter.downloadGLB(coolerRoot, filename);
+
+    showToast('AR model downloaded! Open on your mobile device to view in augmented reality.');
   } catch (err) {
-    console.error('AR failed:', err);
-    showPremiumToast('AR not supported on this device', { type: 'error' });
+    console.error('AR export failed:', err);
+    showToast(`Failed to export AR model: ${err.message}`);
   }
 });
 
