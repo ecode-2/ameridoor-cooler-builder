@@ -800,16 +800,28 @@ document.getElementById('arBtn')?.addEventListener('click', async () => {
       message.style.cssText = 'color:white;font-size:18px;text-align:center;padding:0 20px;';
       message.textContent = 'Tap below to view your cooler in AR';
 
+      // Create wrapper for AR link with image
+      const arLinkWrapper = document.createElement('div');
+      arLinkWrapper.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:15px;';
+
       const arLink = document.createElement('a');
       arLink.rel = 'ar';
       arLink.href = modelUrl;
-      arLink.style.cssText = 'display:block;background:#00a885;color:white;padding:20px 60px;border-radius:12px;text-decoration:none;font-size:20px;font-weight:bold;box-shadow:0 4px 12px rgba(0,0,0,0.3);';
-      arLink.textContent = 'View in AR';
 
-      // Add required image for AR Quick Look
+      // Add required image for AR Quick Look - must be visible for iOS
       const img = document.createElement('img');
-      img.style.display = 'none';
+      img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='; // 1x1 transparent PNG
+      img.style.cssText = 'width:1px;height:1px;opacity:0.01;position:absolute;';
+      img.alt = 'AR Preview';
       arLink.appendChild(img);
+
+      // Add visible button text
+      const buttonText = document.createElement('span');
+      buttonText.style.cssText = 'display:block;background:#00a885;color:white;padding:20px 60px;border-radius:12px;text-decoration:none;font-size:20px;font-weight:bold;box-shadow:0 4px 12px rgba(0,0,0,0.3);';
+      buttonText.textContent = 'View in AR';
+      arLink.appendChild(buttonText);
+
+      arLinkWrapper.appendChild(arLink);
 
       const cancelBtn = document.createElement('button');
       cancelBtn.textContent = 'Cancel';
@@ -817,7 +829,7 @@ document.getElementById('arBtn')?.addEventListener('click', async () => {
       cancelBtn.onclick = () => document.body.removeChild(overlay);
 
       overlay.appendChild(message);
-      overlay.appendChild(arLink);
+      overlay.appendChild(arLinkWrapper);
       overlay.appendChild(cancelBtn);
       document.body.appendChild(overlay);
 
