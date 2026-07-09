@@ -1,0 +1,808 @@
+/**
+ * main.js
+ * ---------------------------------------------------------------------------
+ * Boots the viewport, wires every configurator control to CONFIG, and keeps
+ * the 3D model + price bar in sync with user input. This is the only file
+ * that talks to the DOM directly -- scene.js/builder.js/pricing.js stay
+ * UI-agnostic so they could be reused behind a different front end.
+ * ---------------------------------------------------------------------------
+ */
+import * as THREE from 'three';
+import { CONFIG, LIMITS } from './config.js';
+import { createViewport, frameCameraToBounds, setPresetView } from './scene.js';
+import { createMaterials, applyFinish, buildCooler, preloadAssetLibrary } from './builder.js';
+import { renderPrice } from './pricing.js';
+import { calculateRefrigerationRequirements } from './RefrigerationSystem.js';
+
+// Premium Features - Foundational
+import { ConfigurationManager } from './ConfigurationManager.js';
+import { CameraAnimations } from './CameraAnimations.js';
+import { ScreenshotExporter } from './ScreenshotExporter.js';
+import { PriceAnimations } from './PriceAnimations.js';
+import { ARExporter } from './ARExporter.js';
+import { LoadingScreen, injectLoadingStyles } from './LoadingScreen.js';
+import { ProjectsDashboard } from './ProjectsDashboard.js';
+
+// Premium Features - Advanced
+import { PartHighlighter } from './PartHighlighter.js';
+import { RealisticMaterials } from './RealisticMaterials.js';
+import { Microinteractions, showToast as showPremiumToast } from './Microinteractions.js';
+import { PerformanceOptimizer } from './PerformanceOptimizer.js';
+import { AccessibilityManager } from './AccessibilityManager.js';
+import { EnvironmentSwitcher } from './EnvironmentSwitcher.js';
+import { PDFQuoteGenerator } from './PDFQuoteGenerator.js';
+
+// ---------------------------------------------------------------------------
+// DOM references
+// ---------------------------------------------------------------------------
+const canvas = document.getElementById('scene-canvas');
+const els = {
+  priceValue: document.getElementById('priceValue'),
+  priceBreakdown: document.getElementById('priceBreakdown'),
+  breakdownToggle: document.getElementById('breakdownToggle'),
+  viewportLoading: document.getElementById('viewportLoading'),
+  specLength: document.getElementById('specLength'),
+  specWidth: document.getElementById('specWidth'),
+  specHeight: document.getElementById('specHeight'),
+  specFootprint: document.getElementById('specFootprint'),
+  toast: document.getElementById('toast'),
+  warningBanner: document.getElementById('warningBanner'),
+  welcomeScreen: document.getElementById('welcomeScreen'),
+};
+
+// ---------------------------------------------------------------------------
+// Welcome Screen - Preconfigured Cooler Options
+// ---------------------------------------------------------------------------
+const preconfiguredCoolers = {
+  '8-door': {
+    appType: 'cooler',
+    depth: 8,
+    width: 24,
+    height: 8,
+    displayDoors: 8,
+    entryDoors: ['side-right'],
+    finish: 'galvalume',
+    accessories: {
+      ledLighting: true,
+      reinforcedFloor: false
+    }
+  },
+  '10-door': {
+    appType: 'cooler',
+    depth: 8,
+    width: 29,
+    height: 8,
+    displayDoors: 10,
+    entryDoors: ['side-right'],
+    finish: 'galvalume',
+    accessories: {
+      ledLighting: true,
+      reinforcedFloor: false
+    }
+  },
+  '12-door': {
+    appType: 'cooler',
+    depth: 8,
+    width: 35,
+    height: 8,
+    displayDoors: 12,
+    entryDoors: ['side-right'],
+    finish: 'galvalume',
+    accessories: {
+      ledLighting: true,
+      reinforcedFloor: false
+    }
+  },
+  '20-door': {
+    appType: 'cooler',
+    depth: 8,
+    width: 55,
+    height: 8,
+    displayDoors: 20,
+    entryDoors: ['side-right'],
+    finish: 'galvalume',
+    accessories: {
+      ledLighting: true,
+      reinforcedFloor: true
+    }
+  },
+  'custom': {
+    appType: 'cooler',
+    depth: 12,
+    width: 10,
+    height: 8,
+    displayDoors: 0,
+    entryDoors: ['side-right'],
+    finish: 'galvalume',
+    accessories: {
+      ledLighting: true,
+      reinforcedFloor: false
+    }
+  }
+};
+
+function loadPreconfiguredCooler(configName) {
+  const config = preconfiguredCoolers[configName];
+  if (!config) return;
+
+  // Apply configuration to CONFIG object
+  CONFIG.appType = config.appType;
+  CONFIG.depth = config.depth;
+  CONFIG.width = config.width;
+  CONFIG.height = config.height;
+  CONFIG.displayDoors = config.displayDoors;
+  CONFIG.entryDoors = [...config.entryDoors];
+  CONFIG.finish = config.finish;
+  CONFIG.accessories = { ...config.accessories };
+
+  // Update UI to reflect the loaded configuration
+  updateUIFromConfig();
+
+  // Hide welcome screen
+  els.welcomeScreen.classList.add('is-hidden');
+
+  // Refresh the 3D model and price
+  refreshAll({ reframe: true });
+}
+
+function updateUIFromConfig() {
+  // Application Type
+  document.querySelector(`input[name="appType"][value="${CONFIG.appType}"]`).checked = true;
+
+  // Depth chips
+  document.querySelectorAll('#depthChips .chip').forEach(chip => {
+    chip.classList.toggle('is-selected', Number(chip.dataset.value) === CONFIG.depth);
+  });
+
+  // Width
+  document.getElementById('widthInput').value = CONFIG.width;
+
+  // Height
+  document.getElementById('heightSelect').value = CONFIG.height;
+
+  // Display doors
+  syncDisplayDoorsUI();
+
+  // Entry doors
+  document.querySelectorAll('input[name="entryDoor"]').forEach(checkbox => {
+    checkbox.checked = CONFIG.entryDoors.includes(checkbox.value);
+  });
+
+  // Finish
+  document.querySelector(`input[name="finish"][value="${CONFIG.finish}"]`).checked = true;
+
+  // Accessories
+  document.getElementById('toggleLED').checked = CONFIG.accessories.ledLighting;
+  document.getElementById('toggleFloor').checked = CONFIG.accessories.reinforcedFloor;
+}
+
+// Welcome screen button handlers
+document.querySelectorAll('.cooler-option').forEach(button => {
+  button.addEventListener('click', () => {
+    const configName = button.dataset.config;
+    loadPreconfiguredCooler(configName);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Three.js bootstrap
+// ---------------------------------------------------------------------------
+const { scene, camera, renderer, controls, resize } = createViewport(canvas);
+const materials = createMaterials();
+applyFinish(materials, CONFIG.finish);
+
+// ---------------------------------------------------------------------------
+// Initialize Premium Features - Loading Screen
+// ---------------------------------------------------------------------------
+injectLoadingStyles();
+const loadingScreen = new LoadingScreen();
+loadingScreen.show(5); // Expecting 5 assets to load
+
+// Loaded once at startup; entries are null for any module that isn't on
+// disk yet, in which case buildCooler() falls back to procedural geometry
+// for that piece automatically. Check the browser console for load
+// warnings if a module you expect to see isn't showing up.
+loadingScreen.incrementProgress('Loading asset library...');
+const loadedAssets = await preloadAssetLibrary();
+
+const coolerRoot = new THREE.Group();
+scene.add(coolerRoot);
+
+// ---------------------------------------------------------------------------
+// Initialize Premium Features
+// ---------------------------------------------------------------------------
+loadingScreen.incrementProgress('Initializing premium features...');
+
+// Foundational
+const configManager = new ConfigurationManager(camera, controls);
+const cameraAnimator = new CameraAnimations(camera, controls);
+const screenshotExporter = new ScreenshotExporter(renderer, scene, camera);
+const priceAnimator = new PriceAnimations(els.priceValue);
+const arExporter = new ARExporter(scene);
+const projectsDashboard = new ProjectsDashboard(configManager, () => {
+  refreshAll({ reframe: false });
+});
+
+// Advanced
+// Temporarily disabled to prevent interference with existing functionality
+// const microinteractions = new Microinteractions();
+const performanceOptimizer = new PerformanceOptimizer(renderer, scene, camera);
+// const accessibilityManager = new AccessibilityManager(scene, camera, controls);
+const environmentSwitcher = new EnvironmentSwitcher(scene, renderer, camera);
+const pdfGenerator = new PDFQuoteGenerator(screenshotExporter);
+
+// Note: These features require post-processing, which we'll integrate later
+// const partHighlighter = new PartHighlighter(renderer, scene, camera, canvas);
+// const realisticMaterials = new RealisticMaterials(renderer, scene);
+
+// Enhance all buttons with microinteractions
+// microinteractions.enhanceAllButtons();
+
+// Set default environment (optional)
+// environmentSwitcher.switchEnvironment('warehouse');
+
+loadingScreen.incrementProgress('Building initial model...');
+
+function rebuildModel({ reframe = false } = {}) {
+  buildCooler(coolerRoot, CONFIG, materials, loadedAssets);
+  if (reframe) frameCameraToBounds(camera, controls, CONFIG.width, CONFIG.depth, CONFIG.height);
+  updateSpecReadout();
+}
+
+function updateSpecReadout() {
+  els.specLength.textContent = `${CONFIG.depth}'`;
+  els.specWidth.textContent = `${CONFIG.width}'`;
+  els.specHeight.textContent = `${CONFIG.height}'`;
+  els.specFootprint.textContent = `${CONFIG.width * CONFIG.depth} sq ft`;
+}
+
+function refreshPrice() {
+  renderPrice(CONFIG, els);
+  // Animate price changes
+  const priceText = els.priceValue.textContent.replace(/[^0-9.]/g, '');
+  const priceValue = parseFloat(priceText) || 0;
+  if (priceValue > 0) {
+    priceAnimator.animateTo(priceValue);
+  }
+  // Update 3-phase warning visibility
+  updateWarningBanner();
+}
+
+function updateWarningBanner() {
+  const refrigeration = calculateRefrigerationRequirements(CONFIG);
+  if (refrigeration && refrigeration.requires3Phase) {
+    els.warningBanner.style.display = 'flex';
+  } else {
+    els.warningBanner.style.display = 'none';
+  }
+}
+
+function refreshAll({ reframe = false } = {}) {
+  rebuildModel({ reframe });
+  refreshPrice();
+}
+
+// initial build
+loadingScreen.incrementProgress('Rendering scene...');
+refreshAll({ reframe: true });
+loadingScreen.hide();
+hideLoadingOverlay();
+
+function hideLoadingOverlay() {
+  requestAnimationFrame(() => els.viewportLoading.classList.add('is-hidden'));
+}
+
+// ---------------------------------------------------------------------------
+// Render loop
+// ---------------------------------------------------------------------------
+const clock = new THREE.Clock();
+
+function animate() {
+  requestAnimationFrame(animate);
+
+  const deltaTime = clock.getDelta();
+
+  // Update systems
+  performanceOptimizer.update();
+  controls.update();
+
+  // Render
+  renderer.render(scene, camera);
+}
+animate();
+
+window.addEventListener('resize', resize);
+resize();
+
+// ---------------------------------------------------------------------------
+// TAB 1: Structure & Dimensions
+// ---------------------------------------------------------------------------
+document.querySelectorAll('input[name="appType"]').forEach((radio) => {
+  radio.addEventListener('change', (e) => {
+    CONFIG.appType = e.target.value;
+    refreshPrice();
+  });
+});
+
+const depthChips = document.querySelectorAll('#depthChips .chip');
+depthChips.forEach((chip) => {
+  chip.addEventListener('click', () => {
+    depthChips.forEach((c) => c.classList.remove('is-selected'));
+    chip.classList.add('is-selected');
+    CONFIG.depth = clamp(Number(chip.dataset.value), LIMITS.depth[0], LIMITS.depth[1]);
+    refreshAll({ reframe: true });
+  });
+});
+
+const widthInput = document.getElementById('widthInput');
+widthInput.addEventListener('input', () => {
+  const value = clamp(Number(widthInput.value) || LIMITS.width[0], LIMITS.width[0], LIMITS.width[1]);
+  CONFIG.width = value;
+  // Re-clamp display doors if width changed - can't have more doors than segments
+  const maxAllowed = maxDisplayDoorsForWidth();
+  if (CONFIG.displayDoors > maxAllowed) {
+    CONFIG.displayDoors = maxAllowed;
+    syncDisplayDoorsUI();
+  }
+  refreshAll({ reframe: true });
+});
+
+const heightSelect = document.getElementById('heightSelect');
+heightSelect.addEventListener('change', () => {
+  CONFIG.height = clamp(Number(heightSelect.value), LIMITS.height[0], LIMITS.height[1]);
+  refreshAll({ reframe: true });
+});
+
+// ---------------------------------------------------------------------------
+// TAB 2: Front Display Doors
+// ---------------------------------------------------------------------------
+const displayDoorsValue = document.getElementById('displayDoorsValue');
+document.getElementById('displayDoorsPlus').addEventListener('click', () => {
+  const maxAllowed = maxDisplayDoorsForWidth();
+  CONFIG.displayDoors = clamp(CONFIG.displayDoors + 1, 0, maxAllowed);
+  syncDisplayDoorsUI();
+  refreshAll();
+});
+document.getElementById('displayDoorsMinus').addEventListener('click', () => {
+  CONFIG.displayDoors = clamp(CONFIG.displayDoors - 1, 0, LIMITS.displayDoors[1]);
+  syncDisplayDoorsUI();
+  refreshAll();
+});
+function maxDisplayDoorsForWidth() {
+  // Calculate based on actual door widths
+  const DISPLAY_DOOR_WIDTH = 2.5;  // 30" = 2.5ft per display door
+  const ENTRY_DOOR_WIDTH = 3.0;    // 36" = 3ft per entry door
+
+  let availableWidth = CONFIG.width;
+
+  // Subtract space for front entry doors
+  const hasFrontLeft = CONFIG.entryDoors.includes('front-left');
+  const hasFrontRight = CONFIG.entryDoors.includes('front-right');
+
+  if (hasFrontLeft) availableWidth -= ENTRY_DOOR_WIDTH;
+  if (hasFrontRight) availableWidth -= ENTRY_DOOR_WIDTH;
+
+  // Calculate max display doors
+  let maxFit = Math.floor(availableWidth / DISPLAY_DOOR_WIDTH);
+
+  // Prefer odd number of doors for better centering (unless it fits exactly)
+  const remainder = availableWidth % DISPLAY_DOOR_WIDTH;
+  if (maxFit > 0 && maxFit % 2 === 0 && remainder < 0.1) {
+    // Doors fit exactly and it's even - use one less for centering
+    maxFit -= 1;
+  }
+
+  return Math.min(LIMITS.displayDoors[1], Math.max(0, maxFit));
+}
+function syncDisplayDoorsUI() {
+  displayDoorsValue.textContent = String(CONFIG.displayDoors);
+}
+
+// ---------------------------------------------------------------------------
+// TAB 3: Entry Doors
+// ---------------------------------------------------------------------------
+document.querySelectorAll('input[name="entryDoor"]').forEach((checkbox) => {
+  checkbox.addEventListener('change', (e) => {
+    const checked = Array.from(document.querySelectorAll('input[name="entryDoor"]:checked')).map(
+      (c) => c.value
+    );
+    CONFIG.entryDoors = checked;
+    // Front entry doors compete with display doors for wall space --
+    // re-clamp so the model never tries to over-allocate the front wall.
+    const maxAllowed = maxDisplayDoorsForWidth();
+    if (CONFIG.displayDoors > maxAllowed) {
+      CONFIG.displayDoors = maxAllowed;
+      syncDisplayDoorsUI();
+    }
+    refreshAll();
+
+    // Animate camera to show the selected door location
+    if (e.target.checked) {
+      const doorLocation = e.target.value;
+      if (doorLocation === 'front-left' || doorLocation === 'front-right') {
+        cameraAnimator.animateToFront(CONFIG.width, CONFIG.depth, CONFIG.height);
+        document.querySelectorAll('.tool-btn[data-view]').forEach((b) => b.classList.remove('is-active'));
+        const activeBtn = document.querySelector('.tool-btn[data-view="front"]');
+        if (activeBtn) activeBtn.classList.add('is-active');
+      } else if (doorLocation === 'side-left') {
+        // Animate to left side view
+        cameraAnimator.animateToSide(CONFIG.width, CONFIG.depth, CONFIG.height, 'left');
+        document.querySelectorAll('.tool-btn[data-view]').forEach((b) => b.classList.remove('is-active'));
+        const activeBtn = document.querySelector('.tool-btn[data-view="side"]');
+        if (activeBtn) activeBtn.classList.add('is-active');
+      } else if (doorLocation === 'side-right') {
+        // Animate to right side view (opposite of left)
+        cameraAnimator.animateToSide(CONFIG.width, CONFIG.depth, CONFIG.height, 'right');
+        document.querySelectorAll('.tool-btn[data-view]').forEach((b) => b.classList.remove('is-active'));
+        const activeBtn = document.querySelector('.tool-btn[data-view="side"]');
+        if (activeBtn) activeBtn.classList.add('is-active');
+      }
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TAB 4: Panels & Finishes
+// ---------------------------------------------------------------------------
+document.querySelectorAll('input[name="finish"]').forEach((radio) => {
+  radio.addEventListener('change', (e) => {
+    CONFIG.finish = e.target.value;
+    // In-place material mutation: instant visual update, no rebuild,
+    // camera framing is completely undisturbed.
+    applyFinish(materials, CONFIG.finish);
+    refreshPrice();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TAB 5: Interior Accessories
+// ---------------------------------------------------------------------------
+document.getElementById('toggleLED').addEventListener('change', (e) => {
+  CONFIG.accessories.ledLighting = e.target.checked;
+  refreshAll();
+});
+document.getElementById('toggleFloor').addEventListener('change', (e) => {
+  CONFIG.accessories.reinforcedFloor = e.target.checked;
+  refreshAll();
+});
+
+// ---------------------------------------------------------------------------
+// Accordion behavior + step-track sync (Mimeeq-style: one panel open at a
+// time, header doubles as a progress indicator)
+// ---------------------------------------------------------------------------
+const accordionItems = document.querySelectorAll('.accordion-item');
+accordionItems.forEach((item) => {
+  const header = item.querySelector('.accordion-header');
+  if (header) {
+    header.addEventListener('click', () => {
+      const isOpen = item.classList.contains('is-open');
+      accordionItems.forEach((i) => i.classList.remove('is-open'));
+      if (!isOpen) {
+        item.classList.add('is-open');
+
+        // Automatically change camera angle based on tab with animation
+        const tabName = item.dataset.tab;
+        const cameraPresetMap = {
+          'dimensions': 'orbit',
+          'displayDoors': 'front',
+          'entryDoors': 'orbit',
+          'finishes': 'orbit',
+          'accessories': 'interior'
+        };
+        const preset = cameraPresetMap[tabName];
+        if (preset) {
+          // Use animated camera transitions
+          switch (preset) {
+            case 'front':
+              cameraAnimator.animateToFront(CONFIG.width, CONFIG.depth, CONFIG.height);
+              break;
+            case 'top':
+              cameraAnimator.animateToTop(CONFIG.width, CONFIG.depth, CONFIG.height);
+              break;
+            case 'side':
+              cameraAnimator.animateToSide(CONFIG.width, CONFIG.depth, CONFIG.height);
+              break;
+            case 'interior':
+              cameraAnimator.animateToInterior(CONFIG.width, CONFIG.depth, CONFIG.height);
+              break;
+            case 'orbit':
+              cameraAnimator.animateToOrbit(CONFIG.width, CONFIG.depth, CONFIG.height);
+              break;
+          }
+          // Update toolbar button active state
+          document.querySelectorAll('.tool-btn[data-view]').forEach((b) => b.classList.remove('is-active'));
+          const activeBtn = document.querySelector(`.tool-btn[data-view="${preset}"]`);
+          if (activeBtn) activeBtn.classList.add('is-active');
+        }
+      }
+      syncStepTrack();
+    });
+  }
+});
+function syncStepTrack() {
+  const openTab = document.querySelector('.accordion-item.is-open')?.dataset.tab;
+  document.querySelectorAll('.step').forEach((step) => {
+    step.classList.toggle('is-active', step.dataset.step === openTab);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Viewport toolbar: camera presets with smooth animations
+// ---------------------------------------------------------------------------
+document.querySelectorAll('.tool-btn[data-view]').forEach((btn) => {
+  btn.addEventListener('click', async () => {
+    document.querySelectorAll('.tool-btn[data-view]').forEach((b) => b.classList.remove('is-active'));
+    btn.classList.add('is-active');
+
+    const view = btn.dataset.view;
+    switch (view) {
+      case 'front':
+        await cameraAnimator.animateToFront(CONFIG.width, CONFIG.depth, CONFIG.height);
+        break;
+      case 'top':
+        await cameraAnimator.animateToTop(CONFIG.width, CONFIG.depth, CONFIG.height);
+        break;
+      case 'side':
+        await cameraAnimator.animateToSide(CONFIG.width, CONFIG.depth, CONFIG.height);
+        break;
+      case 'interior':
+        await cameraAnimator.animateToInterior(CONFIG.width, CONFIG.depth, CONFIG.height);
+        break;
+      case 'orbit':
+        await cameraAnimator.animateToOrbit(CONFIG.width, CONFIG.depth, CONFIG.height);
+        break;
+    }
+  });
+});
+document.getElementById('resetViewBtn').addEventListener('click', () => {
+  frameCameraToBounds(camera, controls, CONFIG.width, CONFIG.depth, CONFIG.height);
+});
+
+// ---------------------------------------------------------------------------
+// Price breakdown toggle
+// ---------------------------------------------------------------------------
+els.breakdownToggle.addEventListener('click', () => {
+  els.priceBreakdown.classList.toggle('is-open');
+  els.breakdownToggle.textContent = els.priceBreakdown.classList.contains('is-open')
+    ? 'Hide breakdown ▴'
+    : 'View breakdown ▾';
+});
+
+// ---------------------------------------------------------------------------
+// Save / Quote actions -> POST to Flask backend
+// ---------------------------------------------------------------------------
+document.getElementById('saveConfigBtn').addEventListener('click', () => {
+  localStorageSafeSave(CONFIG);
+  showToast('Configuration saved to this browser.');
+});
+
+document.getElementById('requestQuoteBtn').addEventListener('click', async () => {
+  const button = document.getElementById('requestQuoteBtn');
+  const originalLabel = button.textContent;
+  button.disabled = true;
+  button.textContent = 'Creating Checkout…';
+
+  try {
+    const payload = buildQuotePayload();
+
+    // Capture a screenshot of the 3D model to include with the order
+    let imageDataUrl = null;
+    try {
+      button.textContent = 'Capturing preview…';
+      // Capture a smaller image for Shopify (800x600 is good for thumbnails)
+      imageDataUrl = await screenshotExporter.captureAsDataURL({
+        width: 800,
+        height: 600,
+        format: 'jpeg',
+        quality: 0.85,
+        download: false
+      });
+    } catch (err) {
+      console.warn('Failed to capture screenshot, continuing without image:', err);
+    }
+
+    // Add the image to the payload if captured successfully
+    if (imageDataUrl) {
+      payload.imageDataUrl = imageDataUrl;
+    }
+
+    button.textContent = 'Creating Checkout…';
+    const response = await fetch('/api/create-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errBody = await response.json().catch(() => ({}));
+      throw new Error(errBody.error || `Server responded ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to create checkout');
+    }
+
+    // Redirect to Shopify checkout
+    window.location.href = data.invoiceUrl;
+  } catch (err) {
+    console.error('Checkout creation failed:', err);
+    showToast(`Could not create checkout: ${err.message}`);
+    button.disabled = false;
+    button.textContent = originalLabel;
+  }
+});
+
+/** Builds the exact JSON payload contract expected by POST /api/quote. */
+function buildQuotePayload() {
+  return {
+    appType: CONFIG.appType,
+    dimensions: {
+      depth: CONFIG.depth,
+      width: CONFIG.width,
+      height: CONFIG.height,
+    },
+    displayDoors: CONFIG.displayDoors,
+    entryDoors: CONFIG.entryDoors,
+    finish: CONFIG.finish,
+    accessories: { ...CONFIG.accessories },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Small utilities
+// ---------------------------------------------------------------------------
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function formatUsd(n) {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n);
+}
+
+let toastTimer;
+function showToast(message) {
+  els.toast.textContent = message;
+  els.toast.classList.add('is-visible');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => els.toast.classList.remove('is-visible'), 3200);
+}
+
+function localStorageSafeSave(config) {
+  try {
+    window.localStorage.setItem('ameridoor.config', JSON.stringify(config));
+  } catch (err) {
+    console.warn('localStorage unavailable, configuration not persisted locally:', err);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Premium Features: Button Handlers
+// ---------------------------------------------------------------------------
+
+// Save configuration
+document.getElementById('saveBtn')?.addEventListener('click', () => {
+  const name = prompt('Enter a name for this configuration:');
+  if (name) {
+    configManager.saveToLocalStorage(name, buildQuotePayload());
+    showPremiumToast('Configuration saved successfully!', { type: 'success' });
+  }
+});
+
+// Share configuration
+document.getElementById('shareBtn')?.addEventListener('click', async () => {
+  try {
+    const payload = buildQuotePayload();
+    const response = await fetch('/api/configurations/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) throw new Error('Failed to save configuration');
+
+    const data = await response.json();
+
+    // Copy to clipboard
+    await navigator.clipboard.writeText(data.url);
+    showPremiumToast('Share link copied to clipboard!', {
+      type: 'success',
+      title: 'Share Link Ready'
+    });
+  } catch (err) {
+    console.error('Share failed:', err);
+    showPremiumToast('Failed to generate share link', { type: 'error' });
+  }
+});
+
+// Screenshot export
+document.getElementById('screenshotBtn')?.addEventListener('click', async () => {
+  try {
+    showPremiumToast('Generating high-resolution render...', { type: 'info', duration: 0 });
+    await screenshotExporter.capture4KPNG(false);
+    showPremiumToast('Screenshot exported successfully!', { type: 'success' });
+  } catch (err) {
+    console.error('Screenshot failed:', err);
+    showPremiumToast('Failed to export screenshot', { type: 'error' });
+  }
+});
+
+// AR viewer
+document.getElementById('arBtn')?.addEventListener('click', async () => {
+  try {
+    await arExporter.launchAR(coolerRoot);
+    showPremiumToast('Launching AR viewer...', { type: 'info' });
+  } catch (err) {
+    console.error('AR failed:', err);
+    showPremiumToast('AR not supported on this device', { type: 'error' });
+  }
+});
+
+// My Projects
+document.getElementById('myProjectsBtn')?.addEventListener('click', () => {
+  projectsDashboard.show();
+});
+
+// Export PDF Quote
+document.getElementById('exportPDFBtn')?.addEventListener('click', async () => {
+  try {
+    // Build pricing data
+    const pricing = {
+      basePrice: 5000,
+      doorPrice: CONFIG.displayDoors * 800 + CONFIG.entryDoors.length * 600,
+      floorPrice: CONFIG.accessories.reinforcedFloor ? 1200 : 0,
+      rampPrice: 0,
+      lightingPrice: CONFIG.accessories.ledLighting ? 300 : 0,
+      subtotal: 0,
+      total: 0
+    };
+    pricing.subtotal = pricing.basePrice + pricing.doorPrice + pricing.floorPrice + pricing.rampPrice + pricing.lightingPrice;
+    pricing.total = pricing.subtotal;
+
+    showPremiumToast('Generating PDF quote...', { type: 'info', duration: 0 });
+
+    await pdfGenerator.generateQuote(buildQuotePayload(), pricing, {
+      quoteId: pdfGenerator.generateQuoteId(),
+      includeImage: true,
+      includeTerms: true
+    });
+
+    showPremiumToast('PDF quote generated successfully!', {
+      type: 'success',
+      title: 'Download Complete'
+    });
+  } catch (err) {
+    console.error('PDF generation failed:', err);
+    showPremiumToast('Failed to generate PDF: ' + err.message, { type: 'error' });
+  }
+});
+
+// Load shared configuration from URL
+const urlParams = new URLSearchParams(window.location.search);
+const configId = urlParams.get('config');
+if (configId) {
+  (async () => {
+    try {
+      const response = await fetch(`/api/configurations/${configId}`);
+      if (response.ok) {
+        const sharedConfig = await response.json();
+
+        // Apply loaded configuration
+        Object.assign(CONFIG, sharedConfig);
+
+        // Update UI to match loaded config
+        if (sharedConfig.dimensions) {
+          CONFIG.width = sharedConfig.dimensions.width;
+          CONFIG.depth = sharedConfig.dimensions.depth;
+          CONFIG.height = sharedConfig.dimensions.height;
+        }
+
+        refreshAll({ reframe: true });
+        showPremiumToast('Shared configuration loaded successfully!', { type: 'success' });
+      }
+    } catch (err) {
+      console.error('Failed to load shared configuration:', err);
+    }
+  })();
+}

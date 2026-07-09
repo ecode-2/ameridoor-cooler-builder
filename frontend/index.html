@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>AmeriDoor Cooler Builder</title>
+<link rel="stylesheet" href="css/styles.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet" />
+
+<!-- Three.js is loaded as an ES module. The importmap lets us use bare
+     specifiers ("three", "three/addons/...") the same way you would with
+     an npm bundler, with zero build step required. -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+
+<!-- ============================================================ -->
+<!-- WELCOME SCREEN                                                -->
+<!-- ============================================================ -->
+<div class="welcome-screen" id="welcomeScreen">
+  <div class="welcome-container">
+    <div class="welcome-header">
+      <h1 class="welcome-title">AmeriDoor <em>Cooler Builder</em></h1>
+      <p class="welcome-subtitle">Choose a preconfigured cooler to start or create your own custom design</p>
+    </div>
+
+    <div class="welcome-options">
+      <!-- 8 Door Option -->
+      <button class="cooler-option" data-config="8-door">
+        <div class="cooler-option__icon">
+          <svg viewBox="0 0 100 60" width="120" height="72">
+            <rect x="10" y="15" width="80" height="35" fill="none" stroke="currentColor" stroke-width="2"/>
+            <line x1="20" y1="15" x2="20" y2="50" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="30" y1="15" x2="30" y2="50" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="40" y1="15" x2="40" y2="50" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="50" y1="15" x2="50" y2="50" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="60" y1="15" x2="60" y2="50" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="70" y1="15" x2="70" y2="50" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="80" y1="15" x2="80" y2="50" stroke="currentColor" stroke-width="1.5"/>
+          </svg>
+        </div>
+        <div class="cooler-option__details">
+          <h3 class="cooler-option__title">8-Door Cooler</h3>
+          <p class="cooler-option__specs">24' W × 8' D × 8' H</p>
+          <p class="cooler-option__desc">Compact solution for small to medium operations</p>
+        </div>
+      </button>
+
+      <!-- 10 Door Option -->
+      <button class="cooler-option" data-config="10-door">
+        <div class="cooler-option__icon">
+          <svg viewBox="0 0 120 60" width="140" height="70">
+            <rect x="10" y="15" width="100" height="35" fill="none" stroke="currentColor" stroke-width="2"/>
+            <line x1="20" y1="15" x2="20" y2="50" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="30" y1="15" x2="30" y2="50" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="40" y1="15" x2="40" y2="50" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="50" y1="15" x2="50" y2="50" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="60" y1="15" x2="60" y2="50" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="70" y1="15" x2="70" y2="50" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="80" y1="15" x2="80" y2="50" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="90" y1="15" x2="90" y2="50" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="100" y1="15" x2="100" y2="50" stroke="currentColor" stroke-width="1.5"/>
+          </svg>
+        </div>
+        <div class="cooler-option__details">
+          <h3 class="cooler-option__title">10-Door Cooler</h3>
+          <p class="cooler-option__specs">29' W × 8' D × 8' H</p>
+          <p class="cooler-option__desc">Popular choice for restaurants and markets</p>
+        </div>
+      </button>
+
+      <!-- 12 Door Option -->
+      <button class="cooler-option" data-config="12-door">
+        <div class="cooler-option__icon">
+          <svg viewBox="0 0 140 60" width="160" height="69">
+            <rect x="10" y="15" width="120" height="35" fill="none" stroke="currentColor" stroke-width="2"/>
+            <line x1="20" y1="15" x2="20" y2="50" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="30" y1="15" x2="30" y2="50" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="40" y1="15" x2="40" y2="50" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="50" y1="15" x2="50" y2="50" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="60" y1="15" x2="60" y2="50" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="70" y1="15" x2="70" y2="50" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="80" y1="15" x2="80" y2="50" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="90" y1="15" x2="90" y2="50" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="100" y1="15" x2="100" y2="50" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="110" y1="15" x2="110" y2="50" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="120" y1="15" x2="120" y2="50" stroke="currentColor" stroke-width="1.5"/>
+          </svg>
+        </div>
+        <div class="cooler-option__details">
+          <h3 class="cooler-option__title">12-Door Cooler</h3>
+          <p class="cooler-option__specs">35' W × 8' D × 8' H</p>
+          <p class="cooler-option__desc">Ideal for grocery stores and distributors</p>
+        </div>
+      </button>
+
+      <!-- 20 Door Option -->
+      <button class="cooler-option" data-config="20-door">
+        <div class="cooler-option__icon">
+          <svg viewBox="0 0 200 60" width="200" height="60">
+            <rect x="10" y="15" width="180" height="35" fill="none" stroke="currentColor" stroke-width="2"/>
+            <line x1="19" y1="15" x2="19" y2="50" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="28" y1="15" x2="28" y2="50" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="37" y1="15" x2="37" y2="50" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="46" y1="15" x2="46" y2="50" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="55" y1="15" x2="55" y2="50" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="64" y1="15" x2="64" y2="50" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="73" y1="15" x2="73" y2="50" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="82" y1="15" x2="82" y2="50" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="91" y1="15" x2="91" y2="50" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="100" y1="15" x2="100" y2="50" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="109" y1="15" x2="109" y2="50" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="118" y1="15" x2="118" y2="50" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="127" y1="15" x2="127" y2="50" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="136" y1="15" x2="136" y2="50" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="145" y1="15" x2="145" y2="50" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="154" y1="15" x2="154" y2="50" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="163" y1="15" x2="163" y2="50" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="172" y1="15" x2="172" y2="50" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="181" y1="15" x2="181" y2="50" stroke="currentColor" stroke-width="1.5"/>
+          </svg>
+        </div>
+        <div class="cooler-option__details">
+          <h3 class="cooler-option__title">20-Door Cooler</h3>
+          <p class="cooler-option__specs">55' W × 8' D × 8' H</p>
+          <p class="cooler-option__desc">Large-scale commercial refrigeration</p>
+        </div>
+      </button>
+
+      <!-- Custom Option -->
+      <button class="cooler-option cooler-option--custom" data-config="custom">
+        <div class="cooler-option__icon">
+          <svg viewBox="0 0 100 100" width="80" height="80">
+            <circle cx="50" cy="50" r="35" fill="none" stroke="currentColor" stroke-width="2"/>
+            <line x1="50" y1="30" x2="50" y2="70" stroke="currentColor" stroke-width="3"/>
+            <line x1="30" y1="50" x2="70" y2="50" stroke="currentColor" stroke-width="3"/>
+          </svg>
+        </div>
+        <div class="cooler-option__details">
+          <h3 class="cooler-option__title">Create Custom</h3>
+          <p class="cooler-option__specs">Build from scratch</p>
+          <p class="cooler-option__desc">Design your own configuration with complete control</p>
+        </div>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="app-shell">
+
+  <!-- ============================================================ -->
+  <!-- HEADER: brand + step progress                                 -->
+  <!-- ============================================================ -->
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-name">AmeriDoor&nbsp;<em>Cooler Builder</em></span>
+    </div>
+    <ol class="step-track" id="stepTrack">
+      <li data-step="dimensions" class="step is-active">Structure</li>
+      <li data-step="displayDoors" class="step">Display&nbsp;Doors</li>
+      <li data-step="entryDoors" class="step">Entry&nbsp;Doors</li>
+      <li data-step="finishes" class="step">Finishes</li>
+      <li data-step="accessories" class="step">Accessories</li>
+    </ol>
+    <button class="btn btn-ghost" id="resetViewBtn" title="Reset camera view">
+      <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12 5V2L8 6l4 4V7c3.31 0 6 2.69 6 6a6 6 0 0 1-6 6 6 6 0 0 1-6-6H4a8 8 0 0 0 8 8 8 8 0 0 0 8-8 8 8 0 0 0-8-8z"/></svg>
+      Reset&nbsp;View
+    </button>
+  </header>
+
+  <!-- ============================================================ -->
+  <!-- MAIN: split viewport                                          -->
+  <!-- ============================================================ -->
+  <main class="app-main">
+
+    <!-- ---------------- LEFT: 3D VIEWPORT ---------------- -->
+    <section class="viewport-panel">
+      <canvas id="scene-canvas"></canvas>
+
+      <!-- floating toolbar over the canvas -->
+      <div class="viewport-toolbar">
+        <button class="tool-btn is-active" data-view="orbit" title="Orbit">
+          <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/></svg>
+        </button>
+        <button class="tool-btn" data-view="front" title="Front view">F</button>
+        <button class="tool-btn" data-view="top" title="Top view">T</button>
+        <button class="tool-btn" data-view="side" title="Side view">S</button>
+        <button class="tool-btn" data-view="interior" title="Interior view">I</button>
+        <span class="toolbar-divider"></span>
+        <button class="tool-btn" id="dimLinesToggle" title="Toggle dimension lines">
+          <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M3 3h2v18H3zM19 3h2v18h-2zM7 11h10v2H7z"/></svg>
+        </button>
+      </div>
+
+      <!-- technical read-out, corner overlay (signature element) -->
+      <div class="spec-readout" id="specReadout">
+        <div class="spec-row"><span>L</span><b id="specLength">12'</b></div>
+        <div class="spec-row"><span>W</span><b id="specWidth">10'</b></div>
+        <div class="spec-row"><span>H</span><b id="specHeight">8'</b></div>
+        <div class="spec-row spec-row--muted"><span>Footprint</span><b id="specFootprint">120 sq ft</b></div>
+      </div>
+
+      <div class="viewport-loading" id="viewportLoading">
+        <div class="spinner"></div>
+        <span>Assembling model&hellip;</span>
+      </div>
+
+      <!-- ---------------- 3-PHASE WARNING BANNER ---------------- -->
+      <div class="warning-banner" id="warningBanner" style="display: none;">
+        <span class="warning-icon">⚠️</span>
+        <span class="warning-text">5 Ton Condensing Unit requires a 3-Phase electrical connection on site.</span>
+      </div>
+
+      <!-- ---------------- BOTTOM PRICE BAR ---------------- -->
+      <div class="price-bar">
+        <div class="price-bar__summary">
+          <span class="price-bar__label">Estimated Price</span>
+          <span class="price-bar__value" id="priceValue">$0</span>
+          <button class="price-bar__breakdown-toggle" id="breakdownToggle">View breakdown ▾</button>
+        </div>
+        <div class="price-bar__actions">
+          <button class="btn btn-outline" id="saveConfigBtn">Save Configuration</button>
+          <button class="btn btn-primary" id="requestQuoteBtn">Checkout</button>
+        </div>
+
+        <div class="price-breakdown" id="priceBreakdown">
+          <!-- populated dynamically by JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------------- RIGHT: CONFIG PANEL ---------------- -->
+    <aside class="config-panel">
+
+      <div class="accordion" id="accordion">
+
+        <!-- TAB 1 : APPLICATION TYPE & DIMENSIONS -->
+        <section class="accordion-item is-open" data-tab="dimensions">
+          <button class="accordion-header">
+            <span class="accordion-index">01</span>
+            <span class="accordion-title">Structure &amp; Dimensions</span>
+            <svg class="chev" viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M7 10l5 5 5-5z"/></svg>
+          </button>
+          <div class="accordion-body">
+
+            <label class="field-label">Application Type</label>
+            <div class="option-grid option-grid--2">
+              <label class="option-card">
+                <input type="radio" name="appType" value="cooler" checked />
+                <span class="option-card__title">Walk-In Cooler</span>
+                <span class="option-card__sub">33&deg;&ndash;40&deg;F</span>
+              </label>
+              <label class="option-card">
+                <input type="radio" name="appType" value="freezer" />
+                <span class="option-card__title">Walk-In Freezer</span>
+                <span class="option-card__sub">-10&deg;&ndash;0&deg;F</span>
+              </label>
+            </div>
+
+            <label class="field-label">Nominal Depth (modular, ft)</label>
+            <div class="chip-row" id="depthChips">
+              <button class="chip" data-value="8">8</button>
+              <button class="chip is-selected" data-value="12">12</button>
+              <button class="chip" data-value="16">16</button>
+              <button class="chip" data-value="20">20</button>
+              <button class="chip" data-value="24">24</button>
+            </div>
+
+            <div class="field-row">
+              <div class="field">
+                <label class="field-label" for="widthInput">Width (ft)</label>
+                <input type="number" id="widthInput" class="field-input" min="6" max="200" step="1" value="10" />
+              </div>
+              <div class="field">
+                <label class="field-label" for="heightSelect">Height</label>
+                <select id="heightSelect" class="field-input">
+                  <option value="8">8 ft</option>
+                  <option value="10">10 ft</option>
+                  <option value="12">12 ft</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 2 : FRONT DISPLAY DOORS -->
+        <section class="accordion-item" data-tab="displayDoors">
+          <button class="accordion-header">
+            <span class="accordion-index">02</span>
+            <span class="accordion-title">Front Display Doors</span>
+            <svg class="chev" viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M7 10l5 5 5-5z"/></svg>
+          </button>
+          <div class="accordion-body">
+            <label class="field-label">Glass Display / Freezer Doors</label>
+            <div class="stepper">
+              <button class="stepper-btn" id="displayDoorsMinus">&minus;</button>
+              <span class="stepper-value" id="displayDoorsValue">0</span>
+              <button class="stepper-btn" id="displayDoorsPlus">+</button>
+            </div>
+            <p class="field-hint">Low-E glass merchandiser doors, mounted on the front wall. Maximum count is limited by unit width.</p>
+          </div>
+        </section>
+
+        <!-- TAB 3 : ENTRY DOORS -->
+        <section class="accordion-item" data-tab="entryDoors">
+          <button class="accordion-header">
+            <span class="accordion-index">03</span>
+            <span class="accordion-title">Personnel Entry Doors</span>
+            <svg class="chev" viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M7 10l5 5 5-5z"/></svg>
+          </button>
+          <div class="accordion-body">
+            <label class="field-label">Placement (select one or more)</label>
+            <div class="option-grid option-grid--2" id="entryDoorGrid">
+              <label class="option-card option-card--checkbox">
+                <input type="checkbox" name="entryDoor" value="front-left" />
+                <span class="option-card__title">Front &ndash; Left</span>
+              </label>
+              <label class="option-card option-card--checkbox">
+                <input type="checkbox" name="entryDoor" value="front-right" />
+                <span class="option-card__title">Front &ndash; Right</span>
+              </label>
+              <label class="option-card option-card--checkbox">
+                <input type="checkbox" name="entryDoor" value="side-left" />
+                <span class="option-card__title">Side &ndash; Left</span>
+              </label>
+              <label class="option-card option-card--checkbox">
+                <input type="checkbox" name="entryDoor" value="side-right" checked />
+                <span class="option-card__title">Side &ndash; Right</span>
+              </label>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 4 : PANELS & FINISHES -->
+        <section class="accordion-item" data-tab="finishes">
+          <button class="accordion-header">
+            <span class="accordion-index">04</span>
+            <span class="accordion-title">Panels &amp; Finishes</span>
+            <svg class="chev" viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M7 10l5 5 5-5z"/></svg>
+          </button>
+          <div class="accordion-body">
+            <label class="field-label">Exterior Cladding</label>
+            <div class="swatch-row" id="finishSwatches">
+              <label class="swatch">
+                <input type="radio" name="finish" value="galvalume" checked />
+                <span class="swatch__chip swatch__chip--galvalume"></span>
+                <span class="swatch__label">Galvalume</span>
+              </label>
+              <label class="swatch">
+                <input type="radio" name="finish" value="stainless" />
+                <span class="swatch__chip swatch__chip--stainless"></span>
+                <span class="swatch__label">Stainless Steel</span>
+              </label>
+              <label class="swatch">
+                <input type="radio" name="finish" value="stucco" />
+                <span class="swatch__chip swatch__chip--stucco"></span>
+                <span class="swatch__label">White Stucco</span>
+              </label>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 5 : INTERIOR ACCESSORIES -->
+        <section class="accordion-item" data-tab="accessories">
+          <button class="accordion-header">
+            <span class="accordion-index">05</span>
+            <span class="accordion-title">Interior Accessories</span>
+            <svg class="chev" viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M7 10l5 5 5-5z"/></svg>
+          </button>
+          <div class="accordion-body">
+            <label class="toggle-row">
+              <span>LED Lighting Track</span>
+              <input type="checkbox" id="toggleLED" checked />
+              <span class="toggle-switch"></span>
+            </label>
+            <label class="toggle-row">
+              <span>Reinforced Flooring</span>
+              <input type="checkbox" id="toggleFloor" />
+              <span class="toggle-switch"></span>
+            </label>
+          </div>
+        </section>
+
+      </div>
+    </aside>
+
+  </main>
+</div>
+
+<!-- toast / confirmation -->
+<div class="toast" id="toast"></div>
+
+<!-- Premium Features Toolbar -->
+<div class="feature-toolbar">
+  <button id="saveBtn" class="feature-btn" title="Save Configuration">
+    <svg viewBox="0 0 24 24" width="20" height="20">
+      <path fill="currentColor" d="M17 3H5c-1.1 0-1.99.9-1.99 2L3 19c0 1.1.89 2 1.99 2H19c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/>
+    </svg>
+  </button>
+  <button id="shareBtn" class="feature-btn" title="Share Configuration">
+    <svg viewBox="0 0 24 24" width="20" height="20">
+      <path fill="currentColor" d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/>
+    </svg>
+  </button>
+  <button id="screenshotBtn" class="feature-btn" title="Download Render">
+    <svg viewBox="0 0 24 24" width="20" height="20">
+      <path fill="currentColor" d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+    </svg>
+  </button>
+  <button id="arBtn" class="feature-btn" title="View in AR">
+    <svg viewBox="0 0 24 24" width="20" height="20">
+      <path fill="currentColor" d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3zm6 9.09c0 4-2.55 7.7-6 8.83-3.45-1.13-6-4.82-6-8.83V6.31l6-2.12 6 2.12v4.78z"/>
+    </svg>
+  </button>
+  <button id="myProjectsBtn" class="feature-btn" title="My Projects">
+    <svg viewBox="0 0 24 24" width="20" height="20">
+      <path fill="currentColor" d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"/>
+    </svg>
+  </button>
+  <button id="exportPDFBtn" class="feature-btn" title="Export PDF Quote">
+    <svg viewBox="0 0 24 24" width="20" height="20">
+      <path fill="currentColor" d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+    </svg>
+  </button>
+</div>
+
+<!-- Premium Features: jsPDF Library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
