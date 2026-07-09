@@ -790,8 +790,27 @@ document.getElementById('arBtn')?.addEventListener('click', async () => {
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
+    // Browser detection - AR Quick Look only works in Safari
+    const isSafari = /Safari/.test(navigator.userAgent) && !/CriOS|FxiOS|OPiOS|brave/i.test(navigator.userAgent);
+    const isBrave = /brave/i.test(navigator.userAgent) || (navigator.brave && typeof navigator.brave.isBrave === 'function');
+
     if (isIOS) {
-      // iOS: Create a visible link that user must tap (iOS security requirement)
+      // Check if in Safari (AR Quick Look only works in Safari on iOS)
+      if (!isSafari && !isBrave) {
+        // Not Safari - show warning
+        const warning = document.createElement('div');
+        warning.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;padding:30px;border-radius:12px;text-align:center;max-width:80%;z-index:10000;box-shadow:0 4px 20px rgba(0,0,0,0.3);';
+        warning.innerHTML = `
+          <p style="margin:0 0 20px;font-size:16px;color:#333;">AR viewing requires Safari browser</p>
+          <button onclick="this.parentElement.remove()" style="background:#00a885;color:white;border:none;padding:12px 30px;border-radius:8px;font-size:16px;cursor:pointer;">OK</button>
+        `;
+        document.body.appendChild(warning);
+        button.disabled = false;
+        button.innerHTML = originalContent;
+        return;
+      }
+
+      // iOS Safari: Create a visible link that user must tap (iOS security requirement)
       // Programmatic clicks don't work for AR Quick Look
       const overlay = document.createElement('div');
       overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;';
@@ -808,7 +827,13 @@ document.getElementById('arBtn')?.addEventListener('click', async () => {
       arLink.rel = 'ar';
       arLink.href = modelUrl;
 
-      // Add required image for AR Quick Look - must be visible for iOS
+      // CRITICAL FIX: Add target="_top" to break out of Shopify iframe
+      arLink.target = '_top';
+
+      // Add MIME type hint for iOS
+      arLink.type = 'model/vnd.pixar.usd';
+
+      // Add required image for AR Quick Look - must be FIRST child
       const img = document.createElement('img');
       img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='; // 1x1 transparent PNG
       img.style.cssText = 'width:1px;height:1px;opacity:0.01;position:absolute;';
