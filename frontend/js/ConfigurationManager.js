@@ -8,6 +8,7 @@
  */
 
 import { CONFIG } from './config.js';
+import { apiCall } from './api-config.js';
 
 export class ConfigurationManager {
   constructor(camera, controls) {
@@ -177,7 +178,7 @@ export class ConfigurationManager {
     const config = this.serializeConfiguration();
 
     try {
-      const response = await fetch('/api/configurations/save', {
+      const response = await apiCall('/api/configurations/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(config),
@@ -207,7 +208,7 @@ export class ConfigurationManager {
    */
   async loadFromServer(id, refreshCallback) {
     try {
-      const response = await fetch(`/api/configurations/${id}`);
+      const response = await apiCall(`/api/configurations/${id}`);
 
       if (!response.ok) {
         throw new Error('Configuration not found');

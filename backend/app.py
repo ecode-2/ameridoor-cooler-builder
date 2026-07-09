@@ -42,7 +42,10 @@ AR_MODELS_DIR = Path(__file__).resolve().parent / "static" / "ar"
 CONFIGURATIONS_DB = {}  # In-memory storage for demo (use database in production)
 
 app = Flask(__name__, static_folder=str(FRONTEND_DIR), static_url_path="")
-CORS(app)  # allow the frontend to be served from a different origin/port during development
+
+# CORS configuration for production - allow requests from Netlify and Shopify
+allowed_origins = os.environ.get('CORS_ORIGINS', '*').split(',')
+CORS(app, origins=allowed_origins, supports_credentials=True)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger("coldcore")

@@ -13,6 +13,7 @@ import { createViewport, frameCameraToBounds, setPresetView } from './scene.js';
 import { createMaterials, applyFinish, buildCooler, preloadAssetLibrary } from './builder.js';
 import { renderPrice } from './pricing.js';
 import { calculateRefrigerationRequirements } from './RefrigerationSystem.js';
+import { apiCall } from './api-config.js';
 
 // Premium Features - Foundational
 import { ConfigurationManager } from './ConfigurationManager.js';
@@ -607,7 +608,7 @@ document.getElementById('requestQuoteBtn').addEventListener('click', async () =>
     }
 
     button.textContent = 'Creating Checkout…';
-    const response = await fetch('/api/create-order', {
+    const response = await apiCall('/api/create-order', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -694,7 +695,7 @@ document.getElementById('saveBtn')?.addEventListener('click', () => {
 document.getElementById('shareBtn')?.addEventListener('click', async () => {
   try {
     const payload = buildQuotePayload();
-    const response = await fetch('/api/configurations/save', {
+    const response = await apiCall('/api/configurations/save', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -784,7 +785,7 @@ const configId = urlParams.get('config');
 if (configId) {
   (async () => {
     try {
-      const response = await fetch(`/api/configurations/${configId}`);
+      const response = await apiCall(`/api/configurations/${configId}`);
       if (response.ok) {
         const sharedConfig = await response.json();
 

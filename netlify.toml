@@ -11,10 +11,10 @@
   status = 200
 
 # Headers for security and performance
+# Note: X-Frame-Options removed to allow Shopify iframe embedding
 [[headers]]
   for = "/*"
   [headers.values]
-    X-Frame-Options = "SAMEORIGIN"
     X-Content-Type-Options = "nosniff"
     X-XSS-Protection = "1; mode=block"
     Referrer-Policy = "strict-origin-when-cross-origin"

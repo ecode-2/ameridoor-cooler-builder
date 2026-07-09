@@ -8,6 +8,7 @@
 
 import * as THREE from 'three';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+import { API_BASE_URL } from './api-config.js';
 
 export class ARExporter {
   constructor(scene) {
@@ -185,7 +186,7 @@ export class ARExporter {
     const formData = new FormData();
     formData.append('model', glbBlob, 'model.glb');
 
-    const response = await fetch('/api/ar/convert-usdz', {
+    const response = await fetch(`${API_BASE_URL}/api/ar/convert-usdz`, {
       method: 'POST',
       body: formData,
     });
@@ -202,7 +203,7 @@ export class ARExporter {
     const formData = new FormData();
     formData.append('model', blob, filename);
 
-    const response = await fetch('/api/ar/upload', {
+    const response = await fetch(`${API_BASE_URL}/api/ar/upload`, {
       method: 'POST',
       body: formData,
     });
@@ -217,7 +218,7 @@ export class ARExporter {
 
   async _generateQRCode(url) {
     // Generate QR code via server or API
-    const response = await fetch('/api/ar/qr-code', {
+    const response = await fetch(`${API_BASE_URL}/api/ar/qr-code`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url }),
