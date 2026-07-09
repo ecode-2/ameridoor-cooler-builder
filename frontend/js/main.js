@@ -767,28 +767,58 @@ document.getElementById('arBtn')?.addEventListener('click', async () => {
 
     showToast('Preparing AR view...');
 
+    // Detect platform first
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
     // Export GLB
     const blob = await arExporter.exportAsGLB(coolerRoot);
 
-    // Upload to backend to get a public URL
-    const formData = new FormData();
-    formData.append('model', blob, `cooler-${CONFIG.width}x${CONFIG.depth}x${CONFIG.height}.glb`);
+    // For iOS: Convert GLB to USDZ via backend
+    // For Android: Use GLB directly
+    let modelUrl;
+    let modelFormat = 'glb';
 
-    const response = await fetch(`${API_BASE_URL}/api/ar/upload`, {
-      method: 'POST',
-      body: formData
-    });
+    if (isIOS) {
+      // iOS requires USDZ - send to conversion endpoint
+      showToast('Converting to USDZ for iOS...');
 
-    if (!response.ok) {
-      throw new Error('Failed to upload AR model');
+      const formData = new FormData();
+      formData.append('model', blob, `cooler-${CONFIG.width}x${CONFIG.depth}x${CONFIG.height}.glb`);
+
+      const response = await fetch(`${API_BASE_URL}/api/ar/convert-usdz`, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to convert model to USDZ');
+      }
+
+      const data = await response.json();
+      modelUrl = data.url;
+      modelFormat = data.format || 'usdz';
+
+      if (data.warning) {
+        console.warn('USDZ conversion warning:', data.warning);
+      }
+    } else {
+      // Android/Desktop: Upload GLB directly
+      const formData = new FormData();
+      formData.append('model', blob, `cooler-${CONFIG.width}x${CONFIG.depth}x${CONFIG.height}.glb`);
+
+      const response = await fetch(`${API_BASE_URL}/api/ar/upload`, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to upload AR model');
+      }
+
+      const data = await response.json();
+      modelUrl = data.url;
     }
-
-    const data = await response.json();
-    const modelUrl = data.url;
-
-    // Use Shopify AR Quick Look or Scene Viewer
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
     // Browser detection - AR Quick Look only works in Safari
     const isSafari = /Safari/.test(navigator.userAgent) && !/CriOS|FxiOS|OPiOS|brave/i.test(navigator.userAgent);
@@ -830,8 +860,12 @@ document.getElementById('arBtn')?.addEventListener('click', async () => {
       // CRITICAL FIX: Add target="_top" to break out of Shopify iframe
       arLink.target = '_top';
 
-      // Add MIME type hint for iOS
-      arLink.type = 'model/vnd.pixar.usd';
+      // Add MIME type hint for iOS based on actual format
+      if (modelFormat === 'usdz') {
+        arLink.type = 'model/vnd.usdz+zip';
+      } else {
+        arLink.type = 'model/vnd.pixar.usd';
+      }
 
       // Add required image for AR Quick Look - must be FIRST child
       const img = document.createElement('img');

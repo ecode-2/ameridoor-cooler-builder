@@ -483,11 +483,13 @@ def serve_ar_model(filename):
     try:
         response = make_response(send_from_directory(AR_MODELS_DIR, filename))
 
-        # Set proper MIME type for GLB files (iOS AR Quick Look)
+        # Set proper MIME type for AR files
         if filename.endswith('.glb'):
             response.headers['Content-Type'] = 'model/gltf-binary'
         elif filename.endswith('.usdz'):
             response.headers['Content-Type'] = 'model/vnd.usdz+zip'
+            # Additional headers for USDZ
+            response.headers['Content-Disposition'] = f'inline; filename="{filename}"'
 
         # Allow cross-origin access for AR viewers
         response.headers['Access-Control-Allow-Origin'] = '*'
@@ -548,7 +550,7 @@ def generate_qr_code():
 
 @app.route("/api/ar/convert-usdz", methods=["POST"])
 def convert_to_usdz():
-    """Convert GLB to USDZ for iOS AR Quick Look"""
+    """Convert GLB to USDZ for iOS AR Quick Look using external conversion service"""
     if 'model' not in request.files:
         return jsonify({"error": "No model file provided"}), 400
 
@@ -558,20 +560,70 @@ def convert_to_usdz():
         return jsonify({"error": "Empty filename"}), 400
 
     try:
-        # For iOS AR Quick Look, GLB files actually work directly on iOS 12+
-        # So we'll just save the GLB and return it
-        # In production, you could use Reality Converter or online services
-
         glb_data = file.read()
 
-        # Return GLB file directly - iOS Quick Look supports GLB format
-        from flask import send_file
-        return send_file(
-            io.BytesIO(glb_data),
-            mimetype='model/vnd.pixar.usd',
-            as_attachment=True,
-            download_name='cooler.glb'
-        )
+        # Save GLB temporarily
+        glb_filename = f"temp_{uuid.uuid4().hex[:8]}.glb"
+        glb_path = AR_MODELS_DIR / glb_filename
+        with open(glb_path, 'wb') as f:
+            f.write(glb_data)
+
+        logger.info(f"Converting GLB to USDZ: {glb_filename}")
+
+        # Use online conversion service - try model-converter.com API
+        try:
+            conversion_url = "https://www.model-converter.com/api/convert"
+
+            files = {'file': ('model.glb', glb_data, 'model/gltf-binary')}
+            data = {
+                'inputFormat': 'glb',
+                'outputFormat': 'usdz'
+            }
+
+            response = requests.post(conversion_url, files=files, data=data, timeout=30)
+
+            if response.status_code == 200:
+                # Save USDZ file
+                usdz_filename = f"ar_{uuid.uuid4().hex[:8]}.usdz"
+                usdz_path = AR_MODELS_DIR / usdz_filename
+
+                with open(usdz_path, 'wb') as f:
+                    f.write(response.content)
+
+                # Clean up GLB temp file
+                glb_path.unlink(missing_ok=True)
+
+                base_url = request.host_url.rstrip('/')
+                usdz_url = f"{base_url}/ar-models/{usdz_filename}"
+
+                logger.info(f"USDZ conversion successful: {usdz_url}")
+                return jsonify({"url": usdz_url, "format": "usdz"})
+            else:
+                raise Exception(f"Conversion service returned {response.status_code}")
+
+        except Exception as conv_error:
+            logger.warning(f"External conversion failed: {conv_error}, falling back to GLB")
+
+            # Fallback: Keep GLB but serve it properly for iOS 12+
+            # Save the GLB in AR models directory
+            fallback_filename = f"ar_{uuid.uuid4().hex[:8]}.glb"
+            fallback_path = AR_MODELS_DIR / fallback_filename
+
+            with open(fallback_path, 'wb') as f:
+                f.write(glb_data)
+
+            # Clean up temp file
+            glb_path.unlink(missing_ok=True)
+
+            base_url = request.host_url.rstrip('/')
+            glb_url = f"{base_url}/ar-models/{fallback_filename}"
+
+            logger.info(f"Using GLB fallback: {glb_url}")
+            return jsonify({
+                "url": glb_url,
+                "format": "glb",
+                "warning": "USDZ conversion unavailable, using GLB (iOS 12+ only)"
+            })
 
     except Exception as e:
         logger.error(f"Failed to process model: {e}")
