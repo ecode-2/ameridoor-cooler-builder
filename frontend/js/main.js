@@ -631,9 +631,14 @@ document.getElementById('requestQuoteBtn').addEventListener('click', async () =>
       throw new Error(data.error || 'Failed to create checkout');
     }
 
-    // Redirect to Shopify checkout
-    console.log('Redirecting to:', data.invoiceUrl);
-    window.location.href = data.invoiceUrl;
+    // Open Shopify checkout in new tab (required when embedded in iframe)
+    console.log('Opening checkout in new tab:', data.invoiceUrl);
+    window.open(data.invoiceUrl, '_blank');
+
+    // Show success message
+    showToast('Opening checkout in new tab...');
+    button.disabled = false;
+    button.textContent = originalLabel;
   } catch (err) {
     console.error('Checkout creation failed:', err);
     showToast(`Could not create checkout: ${err.message}`);
