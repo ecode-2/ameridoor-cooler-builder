@@ -2,10 +2,7 @@
 [build]
   # No build step needed - static files
   publish = "frontend"
-
-[build.environment]
-  # Set to production
-  NODE_ENV = "production"
+  command = ""
 
 # Redirect all requests to index.html for SPA routing
 [[redirects]]
