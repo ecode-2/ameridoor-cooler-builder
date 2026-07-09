@@ -791,17 +791,26 @@ document.getElementById('arBtn')?.addEventListener('click', async () => {
         body: formData
       });
 
+      console.log('USDZ conversion response status:', response.status);
+
       if (!response.ok) {
-        throw new Error('Failed to convert model to USDZ');
+        const errorText = await response.text();
+        console.error('USDZ conversion failed:', errorText);
+        throw new Error(`Failed to convert model to USDZ: ${response.status}`);
       }
 
       const data = await response.json();
+      console.log('USDZ conversion response:', data);
+
       modelUrl = data.url;
       modelFormat = data.format || 'usdz';
 
       if (data.warning) {
         console.warn('USDZ conversion warning:', data.warning);
+        showToast('Using fallback format for AR');
       }
+
+      console.log(`AR model ready - Format: ${modelFormat}, URL: ${modelUrl}`);
     } else {
       // Android/Desktop: Upload GLB directly
       const formData = new FormData();

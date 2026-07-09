@@ -570,19 +570,19 @@ def convert_to_usdz():
 
         logger.info(f"Converting GLB to USDZ: {glb_filename}")
 
-        # Use online conversion service - try model-converter.com API
+        # Try multiple conversion approaches
+        conversion_successful = False
+
+        # Approach 1: Try Google's glTF to USDZ API (if available)
         try:
-            conversion_url = "https://www.model-converter.com/api/convert"
+            logger.info("Attempting Google USD conversion...")
+            # Google ModelViewer API endpoint for conversion
+            conversion_url = "https://us-central1-ar-viewer.cloudfunctions.net/glbToUsdz"
 
-            files = {'file': ('model.glb', glb_data, 'model/gltf-binary')}
-            data = {
-                'inputFormat': 'glb',
-                'outputFormat': 'usdz'
-            }
+            files = {'model': ('model.glb', glb_data, 'model/gltf-binary')}
+            response = requests.post(conversion_url, files=files, timeout=30)
 
-            response = requests.post(conversion_url, files=files, data=data, timeout=30)
-
-            if response.status_code == 200:
+            if response.status_code == 200 and len(response.content) > 1000:
                 # Save USDZ file
                 usdz_filename = f"ar_{uuid.uuid4().hex[:8]}.usdz"
                 usdz_path = AR_MODELS_DIR / usdz_filename
@@ -590,19 +590,48 @@ def convert_to_usdz():
                 with open(usdz_path, 'wb') as f:
                     f.write(response.content)
 
-                # Clean up GLB temp file
                 glb_path.unlink(missing_ok=True)
-
                 base_url = request.host_url.rstrip('/')
                 usdz_url = f"{base_url}/ar-models/{usdz_filename}"
 
-                logger.info(f"USDZ conversion successful: {usdz_url}")
+                logger.info(f"USDZ conversion successful via Google API: {usdz_url}")
                 return jsonify({"url": usdz_url, "format": "usdz"})
             else:
-                raise Exception(f"Conversion service returned {response.status_code}")
+                raise Exception(f"Google API returned {response.status_code}")
 
-        except Exception as conv_error:
-            logger.warning(f"External conversion failed: {conv_error}, falling back to GLB")
+        except Exception as google_error:
+            logger.warning(f"Google conversion failed: {google_error}")
+
+        # Approach 2: Try Khronos sample converter API
+        try:
+            logger.info("Attempting Khronos sample converter...")
+            conversion_url = "https://modelviewer.dev/api/v1/convert"
+
+            files = {'file': ('model.glb', glb_data, 'model/gltf-binary')}
+            data = {'outputFormat': 'usdz'}
+            response = requests.post(conversion_url, files=files, data=data, timeout=30)
+
+            if response.status_code == 200 and len(response.content) > 1000:
+                usdz_filename = f"ar_{uuid.uuid4().hex[:8]}.usdz"
+                usdz_path = AR_MODELS_DIR / usdz_filename
+
+                with open(usdz_path, 'wb') as f:
+                    f.write(response.content)
+
+                glb_path.unlink(missing_ok=True)
+                base_url = request.host_url.rstrip('/')
+                usdz_url = f"{base_url}/ar-models/{usdz_filename}"
+
+                logger.info(f"USDZ conversion successful via Khronos API: {usdz_url}")
+                return jsonify({"url": usdz_url, "format": "usdz"})
+            else:
+                raise Exception(f"Khronos API returned {response.status_code}")
+
+        except Exception as khronos_error:
+            logger.warning(f"Khronos conversion failed: {khronos_error}")
+
+        # All conversions failed - log detailed error and fall back
+        logger.error("All USDZ conversion services failed, falling back to GLB")
 
             # Fallback: Keep GLB but serve it properly for iOS 12+
             # Save the GLB in AR models directory
