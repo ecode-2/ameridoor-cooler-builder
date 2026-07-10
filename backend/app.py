@@ -635,11 +635,11 @@ def convert_to_usdz():
 
             # Fallback: Keep GLB but serve it properly for iOS 12+
             # Save the GLB in AR models directory
-            fallback_filename = f"ar_{uuid.uuid4().hex[:8]}.glb"
-            fallback_path = AR_MODELS_DIR / fallback_filename
+        fallback_filename = f"ar_{uuid.uuid4().hex[:8]}.glb"
+        fallback_path = AR_MODELS_DIR / fallback_filename
 
-            with open(fallback_path, 'wb') as f:
-                f.write(glb_data)
+        with open(fallback_path, 'wb') as f:
+            f.write(glb_data)
 
             # Clean up temp file
             glb_path.unlink(missing_ok=True)
