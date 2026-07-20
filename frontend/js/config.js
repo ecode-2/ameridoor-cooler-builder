@@ -61,10 +61,6 @@ export const CONFIG = {
  * ---------------------------------------------------------------------------
  */
 export const PRICING_RULES = {
-  base: {
-    cooler: 4200,
-    freezer: 6800,
-  },
   perSquareFoot: {
     cooler: 38,
     freezer: 54,

@@ -34,7 +34,6 @@ MAX_DISPLAY_DOORS = 500  # Effectively limitless - validated by panel segments
 PANEL_SEGMENT_FT = 4  # must match frontend/js/config.js PANEL_SEGMENT_FT
 
 PRICING_RULES = {
-    "base": {"cooler": 4200, "freezer": 6800},
     "per_square_foot": {"cooler": 38, "freezer": 54},
     "per_foot_of_height_above_8": 260,
     "display_door_each": 1439,
@@ -304,12 +303,6 @@ def calculate_price(config: dict[str, Any]) -> PriceBreakdown:
     """Computes an itemized price breakdown for an already-validated config."""
     rules = PRICING_RULES
     breakdown = PriceBreakdown()
-
-    app_type = config["appType"]
-    dims = config["dimensions"]
-
-    base = rules["base"][app_type]
-    breakdown.lines.append(PriceLine(f"Base unit ({app_type})", base))
 
     # Use panel-based pricing instead of per-square-foot
     panel_costs = calculate_panel_costs(config, rules)

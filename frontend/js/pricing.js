@@ -96,9 +96,6 @@ export function calculatePrice(config) {
   const rules = PRICING_RULES;
   const lines = [];
 
-  const base = rules.base[config.appType];
-  lines.push({ label: `Base unit (${config.appType})`, amount: base });
-
   // Use panel-based pricing instead of per-square-foot
   const panelCosts = calculatePanelCosts(config);
 
