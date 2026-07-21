@@ -757,7 +757,7 @@ document.getElementById('screenshotBtn')?.addEventListener('click', async () => 
   }
 });
 
-// AR viewer - use Shopify's native AR viewer
+// AR viewer - use Google Model Viewer for cross-platform AR
 document.getElementById('arBtn')?.addEventListener('click', async () => {
   try {
     const button = document.getElementById('arBtn');
@@ -767,158 +767,61 @@ document.getElementById('arBtn')?.addEventListener('click', async () => {
 
     showToast('Preparing AR view...');
 
-    // Detect platform first
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-    // Export GLB
+    // Export GLB from Three.js scene
     const blob = await arExporter.exportAsGLB(coolerRoot);
 
-    // For iOS: Convert GLB to USDZ via backend
-    // For Android: Use GLB directly
-    let modelUrl;
-    let modelFormat = 'glb';
+    // Upload GLB to server
+    const formData = new FormData();
+    formData.append('model', blob, `cooler-${CONFIG.width}x${CONFIG.depth}x${CONFIG.height}.glb`);
 
-    if (isIOS) {
-      // iOS requires USDZ - send to conversion endpoint
-      showToast('Converting to USDZ for iOS...');
+    const response = await fetch(`${API_BASE_URL}/api/ar/upload`, {
+      method: 'POST',
+      body: formData
+    });
 
-      const formData = new FormData();
-      formData.append('model', blob, `cooler-${CONFIG.width}x${CONFIG.depth}x${CONFIG.height}.glb`);
-
-      const response = await fetch(`${API_BASE_URL}/api/ar/convert-usdz`, {
-        method: 'POST',
-        body: formData
-      });
-
-      console.log('USDZ conversion response status:', response.status);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('USDZ conversion failed:', errorText);
-        throw new Error(`Failed to convert model to USDZ: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('USDZ conversion response:', data);
-
-      modelUrl = data.url;
-      modelFormat = data.format || 'usdz';
-
-      if (data.warning) {
-        console.warn('USDZ conversion warning:', data.warning);
-        showToast('Using fallback format for AR');
-      }
-
-      console.log(`AR model ready - Format: ${modelFormat}, URL: ${modelUrl}`);
-    } else {
-      // Android/Desktop: Upload GLB directly
-      const formData = new FormData();
-      formData.append('model', blob, `cooler-${CONFIG.width}x${CONFIG.depth}x${CONFIG.height}.glb`);
-
-      const response = await fetch(`${API_BASE_URL}/api/ar/upload`, {
-        method: 'POST',
-        body: formData
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to upload AR model');
-      }
-
-      const data = await response.json();
-      modelUrl = data.url;
+    if (!response.ok) {
+      throw new Error('Failed to upload AR model');
     }
 
-    // Browser detection - AR Quick Look only works in Safari
-    const isSafari = /Safari/.test(navigator.userAgent) && !/CriOS|FxiOS|OPiOS|brave/i.test(navigator.userAgent);
-    const isBrave = /brave/i.test(navigator.userAgent) || (navigator.brave && typeof navigator.brave.isBrave === 'function');
+    const data = await response.json();
+    const modelUrl = data.url;
 
-    if (isIOS) {
-      // Check if in Safari (AR Quick Look only works in Safari on iOS)
-      if (!isSafari && !isBrave) {
-        // Not Safari - show warning
-        const warning = document.createElement('div');
-        warning.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;padding:30px;border-radius:12px;text-align:center;max-width:80%;z-index:10000;box-shadow:0 4px 20px rgba(0,0,0,0.3);';
-        warning.innerHTML = `
-          <p style="margin:0 0 20px;font-size:16px;color:#333;">AR viewing requires Safari browser</p>
-          <button onclick="this.parentElement.remove()" style="background:#00a885;color:white;border:none;padding:12px 30px;border-radius:8px;font-size:16px;cursor:pointer;">OK</button>
-        `;
-        document.body.appendChild(warning);
-        button.disabled = false;
-        button.innerHTML = originalContent;
-        return;
-      }
+    console.log('AR model uploaded:', modelUrl);
 
-      // iOS Safari: Create a visible link that user must tap (iOS security requirement)
-      // Programmatic clicks don't work for AR Quick Look
-      const overlay = document.createElement('div');
-      overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;';
+    // Create Model Viewer dynamically
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.95);z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;';
 
-      const message = document.createElement('div');
-      message.style.cssText = 'color:white;font-size:18px;text-align:center;padding:0 20px;';
-      message.textContent = 'Tap below to view your cooler in AR';
+    const modelViewer = document.createElement('model-viewer');
+    modelViewer.setAttribute('src', modelUrl);
+    modelViewer.setAttribute('ar', '');
+    modelViewer.setAttribute('ar-modes', 'webxr scene-viewer quick-look');
+    modelViewer.setAttribute('camera-controls', '');
+    modelViewer.setAttribute('shadow-intensity', '1');
+    modelViewer.setAttribute('auto-rotate', '');
+    modelViewer.style.cssText = 'width:90%;max-width:600px;height:70%;background-color:transparent;';
 
-      // Create wrapper for AR link with image
-      const arLinkWrapper = document.createElement('div');
-      arLinkWrapper.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:15px;';
+    // AR button for model-viewer
+    const arButton = document.createElement('button');
+    arButton.slot = 'ar-button';
+    arButton.style.cssText = 'background:#00a885;color:white;border:none;padding:16px 40px;border-radius:8px;font-size:18px;font-weight:bold;margin-top:20px;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.3);';
+    arButton.textContent = 'View in Your Space';
+    modelViewer.appendChild(arButton);
 
-      const arLink = document.createElement('a');
-      arLink.rel = 'ar';
-      arLink.href = modelUrl;
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = 'Close';
+    closeBtn.style.cssText = 'background:transparent;color:white;border:2px solid white;padding:12px 30px;border-radius:8px;font-size:16px;margin-top:20px;cursor:pointer;';
+    closeBtn.onclick = () => {
+      document.body.removeChild(overlay);
+      button.disabled = false;
+      button.innerHTML = originalContent;
+    };
 
-      // CRITICAL FIX: Add target="_top" to break out of Shopify iframe
-      arLink.target = '_top';
+    overlay.appendChild(modelViewer);
+    overlay.appendChild(closeBtn);
+    document.body.appendChild(overlay);
 
-      // Add MIME type hint for iOS based on actual format
-      if (modelFormat === 'usdz') {
-        arLink.type = 'model/vnd.usdz+zip';
-      } else {
-        arLink.type = 'model/vnd.pixar.usd';
-      }
-
-      // Add required image for AR Quick Look - must be FIRST child
-      const img = document.createElement('img');
-      img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='; // 1x1 transparent PNG
-      img.style.cssText = 'width:1px;height:1px;opacity:0.01;position:absolute;';
-      img.alt = 'AR Preview';
-      arLink.appendChild(img);
-
-      // Add visible button text
-      const buttonText = document.createElement('span');
-      buttonText.style.cssText = 'display:block;background:#00a885;color:white;padding:20px 60px;border-radius:12px;text-decoration:none;font-size:20px;font-weight:bold;box-shadow:0 4px 12px rgba(0,0,0,0.3);';
-      buttonText.textContent = 'View in AR';
-      arLink.appendChild(buttonText);
-
-      arLinkWrapper.appendChild(arLink);
-
-      const cancelBtn = document.createElement('button');
-      cancelBtn.textContent = 'Cancel';
-      cancelBtn.style.cssText = 'background:transparent;color:white;border:2px solid white;padding:15px 40px;border-radius:8px;font-size:16px;margin-top:20px;cursor:pointer;';
-      cancelBtn.onclick = () => document.body.removeChild(overlay);
-
-      overlay.appendChild(message);
-      overlay.appendChild(arLinkWrapper);
-      overlay.appendChild(cancelBtn);
-      document.body.appendChild(overlay);
-
-      showToast('Tap the button to launch AR');
-    } else if (isMobile) {
-      // Android: Use Scene Viewer
-      const intentUrl = `intent://arvr.google.com/scene-viewer/1.0?file=${encodeURIComponent(modelUrl)}&mode=ar_preferred#Intent;scheme=https;package=com.google.android.googlequicksearchbox;action=android.intent.action.VIEW;S.browser_fallback_url=https://developers.google.com/ar;end;`;
-      window.location.href = intentUrl;
-      showToast('Opening Scene Viewer...');
-    } else {
-      // Desktop: Download the GLB file with instructions
-      const downloadLink = document.createElement('a');
-      downloadLink.href = URL.createObjectURL(blob);
-      downloadLink.download = `ameridoor-cooler-${CONFIG.width}x${CONFIG.depth}x${CONFIG.height}.glb`;
-      downloadLink.click();
-      URL.revokeObjectURL(downloadLink.href);
-      showToast('AR model downloaded! Transfer to your mobile device to view in AR.');
-    }
-
-    button.disabled = false;
-    button.innerHTML = originalContent;
+    showToast('Tap "View in Your Space" to launch AR');
   } catch (err) {
     console.error('AR export failed:', err);
     showToast(`Failed to create AR view: ${err.message}`);

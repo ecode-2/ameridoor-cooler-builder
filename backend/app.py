@@ -25,7 +25,6 @@ import io
 import base64
 import os
 import requests
-import docker
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -549,143 +548,8 @@ def generate_qr_code():
         return jsonify({"error": "Failed to generate QR code"}), 500
 
 
-def convert_glb_to_usdz_docker(glb_path, usdz_path):
-    """
-    Convert GLB to USDZ using Google's usd_from_gltf via Docker
-    Uses plattar/python-xrutils Docker image (190 MB)
-    """
-    try:
-        # Initialize Docker client
-        client = docker.from_env()
-
-        # Pull image if not exists (only downloads once)
-        logger.info("Pulling plattar/python-xrutils Docker image...")
-        try:
-            client.images.pull('plattar/python-xrutils:latest')
-            logger.info("Docker image ready")
-        except Exception as pull_error:
-            logger.warning(f"Could not pull latest image: {pull_error}, using cached version")
-
-        # Setup volume bindings - Docker needs absolute paths
-        input_dir = str(Path(glb_path).parent.resolve())
-        output_dir = str(Path(usdz_path).parent.resolve())
-
-        glb_filename = Path(glb_path).name
-        usdz_filename = Path(usdz_path).name
-
-        volumes = {
-            input_dir: {'bind': '/input', 'mode': 'ro'},
-            output_dir: {'bind': '/output', 'mode': 'rw'}
-        }
-
-        # Run conversion command
-        command = f"usd_from_gltf /input/{glb_filename} /output/{usdz_filename}"
-
-        logger.info(f"Running Docker conversion: {command}")
-
-        container = client.containers.run(
-            'plattar/python-xrutils:latest',
-            command,
-            volumes=volumes,
-            remove=True,  # Auto-remove container after completion
-            detach=False,  # Wait for completion
-            stdout=True,
-            stderr=True
-        )
-
-        logger.info(f"Docker conversion output: {container}")
-
-        # Check if USDZ was created
-        if Path(usdz_path).exists():
-            logger.info(f"USDZ conversion successful: {usdz_path}")
-            return True
-        else:
-            logger.error("USDZ file was not created")
-            return False
-
-    except docker.errors.DockerException as docker_error:
-        logger.error(f"Docker error during conversion: {docker_error}")
-        return False
-    except Exception as e:
-        logger.error(f"Unexpected error during Docker conversion: {e}")
-        return False
-
-
-@app.route("/api/ar/convert-usdz", methods=["POST"])
-def convert_to_usdz():
-    """Convert GLB to USDZ for iOS AR Quick Look using Docker-based conversion"""
-    if 'model' not in request.files:
-        return jsonify({"error": "No model file provided"}), 400
-
-    file = request.files['model']
-
-    if file.filename == '':
-        return jsonify({"error": "Empty filename"}), 400
-
-    glb_path = None
-    try:
-        glb_data = file.read()
-
-        # Save GLB temporarily
-        glb_filename = f"temp_{uuid.uuid4().hex[:8]}.glb"
-        glb_path = AR_MODELS_DIR / glb_filename
-        with open(glb_path, 'wb') as f:
-            f.write(glb_data)
-
-        logger.info(f"Converting GLB to USDZ using Docker: {glb_filename} ({len(glb_data)} bytes)")
-
-        # Prepare output path
-        usdz_filename = f"ar_{uuid.uuid4().hex[:8]}.usdz"
-        usdz_path = AR_MODELS_DIR / usdz_filename
-
-        # Try Docker conversion
-        conversion_success = convert_glb_to_usdz_docker(str(glb_path), str(usdz_path))
-
-        if conversion_success:
-            # Clean up temp GLB file
-            glb_path.unlink(missing_ok=True)
-
-            base_url = request.host_url.rstrip('/')
-            usdz_url = f"{base_url}/ar-models/{usdz_filename}"
-            file_size = Path(usdz_path).stat().st_size
-
-            logger.info(f"USDZ conversion successful: {usdz_url} ({file_size} bytes)")
-            return jsonify({
-                "url": usdz_url,
-                "format": "usdz",
-                "size": file_size
-            })
-        else:
-            # Docker conversion failed - fallback to GLB
-            logger.warning("Docker conversion failed, falling back to GLB")
-
-            # Save the GLB in AR models directory
-            fallback_filename = f"ar_{uuid.uuid4().hex[:8]}.glb"
-            fallback_path = AR_MODELS_DIR / fallback_filename
-
-            with open(fallback_path, 'wb') as f:
-                f.write(glb_data)
-
-            # Clean up temp file
-            if glb_path and Path(glb_path).exists():
-                glb_path.unlink(missing_ok=True)
-
-            base_url = request.host_url.rstrip('/')
-            glb_url = f"{base_url}/ar-models/{fallback_filename}"
-
-            logger.info(f"Using GLB fallback: {glb_url}")
-            return jsonify({
-                "url": glb_url,
-                "format": "glb",
-                "warning": "USDZ conversion unavailable, using GLB (iOS 12+ only)"
-            })
-
-    except Exception as e:
-        logger.error(f"Failed to process model: {e}")
-        # Clean up temp files on error
-        if glb_path and Path(glb_path).exists():
-            Path(glb_path).unlink(missing_ok=True)
-        return jsonify({"error": f"Failed to process model: {str(e)}"}), 500
+# Note: /api/ar/convert-usdz endpoint removed - using Model Viewer for AR instead
+# Model Viewer handles GLB→USDZ conversion via Google's CDN automatically
 
 
 # ---------------------------------------------------------------------------
