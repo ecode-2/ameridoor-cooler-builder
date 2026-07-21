@@ -723,18 +723,18 @@ document.getElementById('saveBtn')?.addEventListener('click', () => {
 document.getElementById('shareBtn')?.addEventListener('click', async () => {
   try {
     const payload = buildQuotePayload();
-    const response = await apiCall('/api/configurations/save', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
 
-    if (!response.ok) throw new Error('Failed to save configuration');
+    // Encode configuration as base64 URL parameter
+    const configString = JSON.stringify(payload);
+    const base64Config = btoa(configString);
 
-    const data = await response.json();
+    // Create shareable URL with config parameter
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.set('config', base64Config);
+    const shareUrl = currentUrl.toString();
 
     // Copy to clipboard
-    await navigator.clipboard.writeText(data.url);
+    await navigator.clipboard.writeText(shareUrl);
     showPremiumToast('Share link copied to clipboard!', {
       type: 'success',
       title: 'Share Link Ready'
@@ -871,29 +871,29 @@ document.getElementById('exportPDFBtn')?.addEventListener('click', async () => {
 
 // Load shared configuration from URL
 const urlParams = new URLSearchParams(window.location.search);
-const configId = urlParams.get('config');
-if (configId) {
+const configParam = urlParams.get('config');
+if (configParam) {
   (async () => {
     try {
-      const response = await apiCall(`/api/configurations/${configId}`);
-      if (response.ok) {
-        const sharedConfig = await response.json();
+      // Decode base64 configuration
+      const configString = atob(configParam);
+      const sharedConfig = JSON.parse(configString);
 
-        // Apply loaded configuration
-        Object.assign(CONFIG, sharedConfig);
+      // Apply loaded configuration
+      Object.assign(CONFIG, sharedConfig);
 
-        // Update UI to match loaded config
-        if (sharedConfig.dimensions) {
-          CONFIG.width = sharedConfig.dimensions.width;
-          CONFIG.depth = sharedConfig.dimensions.depth;
-          CONFIG.height = sharedConfig.dimensions.height;
-        }
-
-        refreshAll({ reframe: true });
-        showPremiumToast('Shared configuration loaded successfully!', { type: 'success' });
+      // Update UI to match loaded config
+      if (sharedConfig.dimensions) {
+        CONFIG.width = sharedConfig.dimensions.width;
+        CONFIG.depth = sharedConfig.dimensions.depth;
+        CONFIG.height = sharedConfig.dimensions.height;
       }
+
+      refreshAll({ reframe: true });
+      showPremiumToast('Shared configuration loaded successfully!', { type: 'success' });
     } catch (err) {
       console.error('Failed to load shared configuration:', err);
+      showPremiumToast('Failed to load shared configuration', { type: 'error' });
     }
   })();
 }

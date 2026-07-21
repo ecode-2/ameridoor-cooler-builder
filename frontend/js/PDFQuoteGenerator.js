@@ -115,7 +115,7 @@ export class PDFQuoteGenerator {
     doc.setFontSize(24);
     doc.setFont(undefined, 'bold');
     doc.setTextColor(0, 83, 156); // AmeriDoor blue
-    doc.text(this.branding.companyName, this.settings.margins, yPos + 0.3);
+    doc.text(String(this.branding.companyName || 'AmeriDoor ColdCore'), this.settings.margins, yPos + 0.3);
 
     // Tagline
     doc.setFontSize(10);
@@ -135,8 +135,8 @@ export class PDFQuoteGenerator {
 
     let contactY = yPos + 0.3;
     contactLines.forEach(line => {
-      const textWidth = doc.getTextWidth(line);
-      doc.text(line, pageWidth - this.settings.margins - textWidth, contactY);
+      const textWidth = doc.getTextWidth(String(line || ''));
+      doc.text(String(line || ''), pageWidth - this.settings.margins - textWidth, contactY);
       contactY += 0.15;
     });
 
@@ -179,9 +179,9 @@ export class PDFQuoteGenerator {
 
     details.forEach(([label, value]) => {
       doc.setFont(undefined, 'bold');
-      doc.text(label, this.settings.margins, yPos);
+      doc.text(String(label || ''), this.settings.margins, yPos);
       doc.setFont(undefined, 'normal');
-      doc.text(value, this.settings.margins + 1.2, yPos);
+      doc.text(String(value || ''), this.settings.margins + 1.2, yPos);
       yPos += 0.2;
     });
 
@@ -204,12 +204,12 @@ export class PDFQuoteGenerator {
     doc.setTextColor(0);
 
     const specifications = [
-      ['Dimensions:', `${config.width}' W × ${config.depth}' D × ${config.height}' H`],
+      ['Dimensions:', `${config.width || 0}' W × ${config.depth || 0}' D × ${config.height || 0}' H`],
       ['Temperature Type:', config.tempType === 'cooler' ? 'Cooler (35-38°F)' : 'Freezer (-10-0°F)'],
-      ['Panel Finish:', this.formatPanelFinish(config.panelFinish)],
-      ['Floor Type:', this.formatFloorType(config.floorType)],
-      ['Door Configuration:', `${config.doorCount} Door(s), ${config.doorHanding} Handing`],
-      ['Door Style:', this.formatDoorStyle(config.doorStyle)],
+      ['Panel Finish:', this.formatPanelFinish(config.panelFinish || 'stainless-steel')],
+      ['Floor Type:', this.formatFloorType(config.floorType || 'standard')],
+      ['Door Configuration:', `${config.doorCount || 1} Door(s), ${config.doorHanding || 'Right'} Handing`],
+      ['Door Style:', this.formatDoorStyle(config.doorStyle || 'standard')],
     ];
 
     // Optional features
@@ -223,9 +223,9 @@ export class PDFQuoteGenerator {
 
     specifications.forEach(([label, value]) => {
       doc.setFont(undefined, 'bold');
-      doc.text(label, this.settings.margins + 0.2, yPos);
+      doc.text(String(label || ''), this.settings.margins + 0.2, yPos);
       doc.setFont(undefined, 'normal');
-      doc.text(value, this.settings.margins + 2, yPos);
+      doc.text(String(value || ''), this.settings.margins + 2, yPos);
       yPos += 0.2;
     });
 
@@ -275,9 +275,9 @@ export class PDFQuoteGenerator {
     }
 
     lineItems.forEach(([item, price]) => {
-      doc.text(item, this.settings.margins + 0.1, yPos);
-      const priceWidth = doc.getTextWidth(price);
-      doc.text(price, pageWidth - this.settings.margins - priceWidth - 0.1, yPos);
+      doc.text(String(item || ''), this.settings.margins + 0.1, yPos);
+      const priceWidth = doc.getTextWidth(String(price || ''));
+      doc.text(String(price || ''), pageWidth - this.settings.margins - priceWidth - 0.1, yPos);
       yPos += 0.2;
     });
 
@@ -371,9 +371,9 @@ export class PDFQuoteGenerator {
     ];
 
     terms.forEach(term => {
-      const lines = doc.splitTextToSize(term, doc.internal.pageSize.getWidth() - 2 * this.settings.margins);
+      const lines = doc.splitTextToSize(String(term || ''), doc.internal.pageSize.getWidth() - 2 * this.settings.margins);
       lines.forEach(line => {
-        doc.text(line, this.settings.margins, yPos);
+        doc.text(String(line || ''), this.settings.margins, yPos);
         yPos += 0.15;
       });
       yPos += 0.1;
@@ -397,13 +397,13 @@ export class PDFQuoteGenerator {
       doc.setFont(undefined, 'normal');
       doc.setTextColor(150);
 
-      const footerText = `${this.branding.companyName} | ${this.branding.phone} | ${this.branding.email}`;
+      const footerText = `${this.branding.companyName || 'AmeriDoor'} | ${this.branding.phone || ''} | ${this.branding.email || ''}`;
       const textWidth = doc.getTextWidth(footerText);
-      doc.text(footerText, (pageWidth - textWidth) / 2, pageHeight - 0.3);
+      doc.text(String(footerText), (pageWidth - textWidth) / 2, pageHeight - 0.3);
 
       const pageText = `Page ${i} of ${pageCount}`;
       const pageWidth2 = doc.getTextWidth(pageText);
-      doc.text(pageText, pageWidth - this.settings.margins - pageWidth2, pageHeight - 0.3);
+      doc.text(String(pageText), pageWidth - this.settings.margins - pageWidth2, pageHeight - 0.3);
     }
   }
 
