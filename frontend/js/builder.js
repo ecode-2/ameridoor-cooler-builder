@@ -25,12 +25,11 @@ const loader = new GLTFLoader();
 // Where production Blender exports would live. Missing files fail silently
 // and fall back to procedural geometry -- see tryLoadModule().
 // Version parameter added to force browser cache refresh when models are updated
-const ASSET_VERSION = '20260726-0200'; // Update this when GLB files change
+const ASSET_VERSION = '20260726-0100'; // Update this when GLB files change
 const ASSET_PATHS = {
   wallPanel: `assets/models/wall_panel.glb?v=${ASSET_VERSION}`,
   roofPanel: `assets/models/roof_panel.glb?v=${ASSET_VERSION}`,
-  displayDoor: `assets/models/door.glb?v=${ASSET_VERSION}`, // Just the door frame
-  displayShelf: `assets/models/shelf.glb?v=${ASSET_VERSION}`, // Separate shelving unit
+  displayDoor: `assets/models/display_door.glb?v=${ASSET_VERSION}`,
   entryDoor: `assets/models/entry_door.glb?v=${ASSET_VERSION}`,
   header8: `assets/models/8ft_header.glb?v=${ASSET_VERSION}`,
   header10: `assets/models/10ft_header.glb?v=${ASSET_VERSION}`,
@@ -107,8 +106,7 @@ function fitAssetToBox(
   targetHeight,
   targetDepth,
   overrideMaterial = null,
-  flushFront = false,
-  removeShelves = false
+  flushFront = false
 ) {
   const clone = sourceObject.clone(true);
 
@@ -119,9 +117,9 @@ function fitAssetToBox(
     if (child.isMesh) {
       const name = (child.name || 'unnamed').toLowerCase();
 
-      // Remove meshes with "shelf" or "shelve" in their name only if removeShelves is true
-      // This filters out floating shelves from entry doors but keeps them for display doors
-      if (removeShelves && (name.includes('shelf') || name.includes('shelve'))) {
+      // Remove meshes with "shelf" or "shelve" in their name (case-insensitive)
+      // This filters out floating shelves that may be included in entry_door.glb
+      if (name.includes('shelf') || name.includes('shelve')) {
         console.log(`[builder] ⚠️  Removing shelf mesh: "${child.name || 'unnamed'}"`);
         meshesToRemove.push(child);
         return;
@@ -381,15 +379,7 @@ function buildWallSlot(kind, segWidth, wallHeight, materials, assets, config) {
 
     if (doorAsset) {
       // Use actual door dimensions, not segment width
-      // Remove shelves from entry doors, but keep them for display doors
-      const shouldRemoveShelves = kind === 'entry';
-      basePiece = fitAssetToBox(doorAsset, doorWidth, doorHeight, PANEL_THICKNESS_FT * 3, null, true, shouldRemoveShelves);
-
-      // For display doors, add the shelf asset as a child
-      if (kind === 'display' && assets.displayShelf) {
-        const shelfAsset = fitAssetToBox(assets.displayShelf, doorWidth, doorHeight, PANEL_THICKNESS_FT * 3, null, false, false);
-        basePiece.add(shelfAsset);
-      }
+      basePiece = fitAssetToBox(doorAsset, doorWidth, doorHeight, PANEL_THICKNESS_FT * 3, null, true);
     } else {
       basePiece =
         kind === 'display'
@@ -453,15 +443,7 @@ function buildWallWithDoors(root, wallLength, wallHeight, doors, materials, asse
     let doorMesh;
 
     if (doorAsset) {
-      // Remove shelves from entry doors, but keep them for display doors
-      const shouldRemoveShelves = door.type === 'entry';
-      doorMesh = fitAssetToBox(doorAsset, doorWidth, doorHeight, PANEL_THICKNESS_FT * 3, null, true, shouldRemoveShelves);
-
-      // For display doors, add the shelf asset as a child
-      if (door.type === 'display' && assets.displayShelf) {
-        const shelfAsset = fitAssetToBox(assets.displayShelf, doorWidth, doorHeight, PANEL_THICKNESS_FT * 3, null, false, false);
-        doorMesh.add(shelfAsset);
-      }
+      doorMesh = fitAssetToBox(doorAsset, doorWidth, doorHeight, PANEL_THICKNESS_FT * 3, null, true);
     } else {
       doorMesh = door.type === 'display'
         ? buildProceduralDisplayDoor(doorWidth, doorHeight, materials)
