@@ -360,14 +360,63 @@ heightSelect.addEventListener('change', () => {
 const displayDoorsValue = document.getElementById('displayDoorsValue');
 document.getElementById('displayDoorsPlus').addEventListener('click', () => {
   const maxAllowed = maxDisplayDoorsForWidth();
-  CONFIG.displayDoors = clamp(CONFIG.displayDoors + 1, 0, maxAllowed);
+  const newDoorCount = CONFIG.displayDoors + 1;
+
+  // If we exceed max allowed, automatically increase width
+  if (newDoorCount > maxAllowed) {
+    const DISPLAY_DOOR_WIDTH = 2.5;  // 30" = 2.5ft per display door
+    const ENTRY_DOOR_WIDTH = 3.0;    // 36" = 3ft per entry door
+
+    // Calculate required width for the new door count
+    let requiredWidth = newDoorCount * DISPLAY_DOOR_WIDTH;
+
+    // Add space for front entry doors
+    const hasFrontLeft = CONFIG.entryDoors.includes('front-left');
+    const hasFrontRight = CONFIG.entryDoors.includes('front-right');
+    if (hasFrontLeft) requiredWidth += ENTRY_DOOR_WIDTH;
+    if (hasFrontRight) requiredWidth += ENTRY_DOOR_WIDTH;
+
+    // Round up to nearest foot and ensure within limits
+    requiredWidth = Math.ceil(requiredWidth);
+    CONFIG.width = clamp(requiredWidth, LIMITS.width[0], LIMITS.width[1]);
+
+    // Update width input field
+    widthInput.value = CONFIG.width;
+  }
+
+  CONFIG.displayDoors = clamp(newDoorCount, 0, LIMITS.displayDoors[1]);
   syncDisplayDoorsUI();
-  refreshAll();
+  refreshAll({ reframe: true });
 });
 document.getElementById('displayDoorsMinus').addEventListener('click', () => {
-  CONFIG.displayDoors = clamp(CONFIG.displayDoors - 1, 0, LIMITS.displayDoors[1]);
+  const newDoorCount = Math.max(0, CONFIG.displayDoors - 1);
+
+  // Automatically decrease width based on door count
+  const DISPLAY_DOOR_WIDTH = 2.5;  // 30" = 2.5ft per display door
+  const ENTRY_DOOR_WIDTH = 3.0;    // 36" = 3ft per entry door
+
+  // Calculate optimal width for the new door count
+  let optimalWidth = newDoorCount * DISPLAY_DOOR_WIDTH;
+
+  // Add space for front entry doors
+  const hasFrontLeft = CONFIG.entryDoors.includes('front-left');
+  const hasFrontRight = CONFIG.entryDoors.includes('front-right');
+  if (hasFrontLeft) optimalWidth += ENTRY_DOOR_WIDTH;
+  if (hasFrontRight) optimalWidth += ENTRY_DOOR_WIDTH;
+
+  // Round up to nearest foot and ensure within limits
+  optimalWidth = Math.ceil(optimalWidth);
+
+  // Only decrease width if the new optimal width is smaller than current
+  if (optimalWidth < CONFIG.width) {
+    CONFIG.width = clamp(optimalWidth, LIMITS.width[0], LIMITS.width[1]);
+    // Update width input field
+    widthInput.value = CONFIG.width;
+  }
+
+  CONFIG.displayDoors = newDoorCount;
   syncDisplayDoorsUI();
-  refreshAll();
+  refreshAll({ reframe: true });
 });
 function maxDisplayDoorsForWidth() {
   // Calculate based on actual door widths
