@@ -25,7 +25,7 @@ const loader = new GLTFLoader();
 // Where production Blender exports would live. Missing files fail silently
 // and fall back to procedural geometry -- see tryLoadModule().
 // Version parameter added to force browser cache refresh when models are updated
-const ASSET_VERSION = '20260725-2303'; // Update this when GLB files change
+const ASSET_VERSION = '20260726-0100'; // Update this when GLB files change
 const ASSET_PATHS = {
   wallPanel: `assets/models/wall_panel.glb?v=${ASSET_VERSION}`,
   roofPanel: `assets/models/roof_panel.glb?v=${ASSET_VERSION}`,
@@ -567,6 +567,7 @@ export function buildCooler(root, config, materials, assets = {}) {
   // ---- Back wall (plain) ----------
   const backWall = buildPanelSegment(width, height, materials.wall, assets.wallPanel);
   backWall.position.set(width / 2, height / 2, depth - PANEL_THICKNESS_FT / 2);
+  backWall.name = 'back-wall'; // Name for transparency control in interior view
   root.add(backWall);
 
   // ---- Left wall with doors ----------------------------------
