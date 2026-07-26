@@ -366,6 +366,7 @@ document.getElementById('displayDoorsPlus').addEventListener('click', () => {
   if (newDoorCount > maxAllowed) {
     const DISPLAY_DOOR_WIDTH = 2.5;  // 30" = 2.5ft per display door
     const ENTRY_DOOR_WIDTH = 3.0;    // 36" = 3ft per entry door
+    const SPACING_BUFFER = 3.0;      // Extra spacing on sides for better appearance
 
     // Calculate required width for the new door count
     let requiredWidth = newDoorCount * DISPLAY_DOOR_WIDTH;
@@ -375,6 +376,9 @@ document.getElementById('displayDoorsPlus').addEventListener('click', () => {
     const hasFrontRight = CONFIG.entryDoors.includes('front-right');
     if (hasFrontLeft) requiredWidth += ENTRY_DOOR_WIDTH;
     if (hasFrontRight) requiredWidth += ENTRY_DOOR_WIDTH;
+
+    // Add spacing buffer for aesthetics
+    requiredWidth += SPACING_BUFFER;
 
     // Round up to nearest foot and ensure within limits
     requiredWidth = Math.ceil(requiredWidth);
@@ -387,6 +391,9 @@ document.getElementById('displayDoorsPlus').addEventListener('click', () => {
   CONFIG.displayDoors = clamp(newDoorCount, 0, LIMITS.displayDoors[1]);
   syncDisplayDoorsUI();
   refreshAll({ reframe: true });
+
+  // Animate to front view to show the doors
+  cameraAnimator.animateToFront(CONFIG.width, CONFIG.depth, CONFIG.height);
 });
 document.getElementById('displayDoorsMinus').addEventListener('click', () => {
   const newDoorCount = Math.max(0, CONFIG.displayDoors - 1);
@@ -394,6 +401,7 @@ document.getElementById('displayDoorsMinus').addEventListener('click', () => {
   // Automatically decrease width based on door count
   const DISPLAY_DOOR_WIDTH = 2.5;  // 30" = 2.5ft per display door
   const ENTRY_DOOR_WIDTH = 3.0;    // 36" = 3ft per entry door
+  const SPACING_BUFFER = 3.0;      // Extra spacing on sides for better appearance
 
   // Calculate optimal width for the new door count
   let optimalWidth = newDoorCount * DISPLAY_DOOR_WIDTH;
@@ -403,6 +411,9 @@ document.getElementById('displayDoorsMinus').addEventListener('click', () => {
   const hasFrontRight = CONFIG.entryDoors.includes('front-right');
   if (hasFrontLeft) optimalWidth += ENTRY_DOOR_WIDTH;
   if (hasFrontRight) optimalWidth += ENTRY_DOOR_WIDTH;
+
+  // Add spacing buffer for aesthetics
+  optimalWidth += SPACING_BUFFER;
 
   // Round up to nearest foot and ensure within limits
   optimalWidth = Math.ceil(optimalWidth);
@@ -417,6 +428,9 @@ document.getElementById('displayDoorsMinus').addEventListener('click', () => {
   CONFIG.displayDoors = newDoorCount;
   syncDisplayDoorsUI();
   refreshAll({ reframe: true });
+
+  // Animate to front view to show the doors
+  cameraAnimator.animateToFront(CONFIG.width, CONFIG.depth, CONFIG.height);
 });
 function maxDisplayDoorsForWidth() {
   // Calculate based on actual door widths
