@@ -25,7 +25,7 @@ const loader = new GLTFLoader();
 // Where production Blender exports would live. Missing files fail silently
 // and fall back to procedural geometry -- see tryLoadModule().
 // Version parameter added to force browser cache refresh when models are updated
-const ASSET_VERSION = '20260726-0100'; // Update this when GLB files change
+const ASSET_VERSION = '20260726-0200'; // Update this when GLB files change
 const ASSET_PATHS = {
   wallPanel: `assets/models/wall_panel.glb?v=${ASSET_VERSION}`,
   roofPanel: `assets/models/roof_panel.glb?v=${ASSET_VERSION}`,
@@ -106,7 +106,8 @@ function fitAssetToBox(
   targetHeight,
   targetDepth,
   overrideMaterial = null,
-  flushFront = false
+  flushFront = false,
+  removeShelves = true
 ) {
   const clone = sourceObject.clone(true);
 
@@ -119,7 +120,8 @@ function fitAssetToBox(
 
       // Remove meshes with "shelf" or "shelve" in their name (case-insensitive)
       // This filters out floating shelves that may be included in entry_door.glb
-      if (name.includes('shelf') || name.includes('shelve')) {
+      // BUT we keep shelves for display doors (removeShelves = false)
+      if (removeShelves && (name.includes('shelf') || name.includes('shelve'))) {
         console.log(`[builder] ⚠️  Removing shelf mesh: "${child.name || 'unnamed'}"`);
         meshesToRemove.push(child);
         return;
@@ -379,7 +381,9 @@ function buildWallSlot(kind, segWidth, wallHeight, materials, assets, config) {
 
     if (doorAsset) {
       // Use actual door dimensions, not segment width
-      basePiece = fitAssetToBox(doorAsset, doorWidth, doorHeight, PANEL_THICKNESS_FT * 3, null, true);
+      // Keep shelves for display doors (removeShelves=false), remove for entry doors (removeShelves=true)
+      const shouldRemoveShelves = kind === 'entry';
+      basePiece = fitAssetToBox(doorAsset, doorWidth, doorHeight, PANEL_THICKNESS_FT * 3, null, true, shouldRemoveShelves);
     } else {
       basePiece =
         kind === 'display'
