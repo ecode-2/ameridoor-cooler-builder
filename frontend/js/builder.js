@@ -24,14 +24,16 @@ const loader = new GLTFLoader();
 
 // Where production Blender exports would live. Missing files fail silently
 // and fall back to procedural geometry -- see tryLoadModule().
+// Version parameter added to force browser cache refresh when models are updated
+const ASSET_VERSION = '20260725-2303'; // Update this when GLB files change
 const ASSET_PATHS = {
-  wallPanel: 'assets/models/wall_panel.glb',
-  roofPanel: 'assets/models/roof_panel.glb',
-  displayDoor: 'assets/models/display_door.glb',
-  entryDoor: 'assets/models/entry_door.glb',
-  header8: 'assets/models/8ft_header.glb',
-  header10: 'assets/models/10ft_header.glb',
-  header12: 'assets/models/12ft_header.glb',
+  wallPanel: `assets/models/wall_panel.glb?v=${ASSET_VERSION}`,
+  roofPanel: `assets/models/roof_panel.glb?v=${ASSET_VERSION}`,
+  displayDoor: `assets/models/display_door.glb?v=${ASSET_VERSION}`,
+  entryDoor: `assets/models/entry_door.glb?v=${ASSET_VERSION}`,
+  header8: `assets/models/8ft_header.glb?v=${ASSET_VERSION}`,
+  header10: `assets/models/10ft_header.glb?v=${ASSET_VERSION}`,
+  header12: `assets/models/12ft_header.glb?v=${ASSET_VERSION}`,
 };
 
 // The wall is split into a fixed-height lower course plus a header course.
