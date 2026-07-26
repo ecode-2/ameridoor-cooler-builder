@@ -595,11 +595,11 @@ function syncStepTrack() {
 // ---------------------------------------------------------------------------
 
 /**
- * Make front wall transparent for interior view
+ * Make back wall transparent for interior view
  */
 function setWallTransparency(transparent) {
   coolerRoot.traverse((child) => {
-    if (child.isMesh && child.name && child.name.includes('front')) {
+    if (child.isMesh && child.name && child.name.includes('back')) {
       if (child.material) {
         const materials = Array.isArray(child.material) ? child.material : [child.material];
         materials.forEach((mat) => {
@@ -642,7 +642,7 @@ document.querySelectorAll('.tool-btn[data-view]').forEach((btn) => {
         await cameraAnimator.animateToSide(CONFIG.width, CONFIG.depth, CONFIG.height);
         break;
       case 'interior':
-        // Make front wall transparent for interior view
+        // Make back wall transparent for interior view
         setWallTransparency(true);
         await cameraAnimator.animateToInterior(CONFIG.width, CONFIG.depth, CONFIG.height);
         break;
