@@ -129,6 +129,17 @@ function fitAssetToBox(
 
       child.castShadow = true;
       child.receiveShadow = true;
+
+      // Apply polygon offset to door materials to prevent z-fighting
+      if (child.material) {
+        const materials = Array.isArray(child.material) ? child.material : [child.material];
+        materials.forEach(mat => {
+          mat.polygonOffset = true;
+          mat.polygonOffsetFactor = 1;
+          mat.polygonOffsetUnits = 1;
+        });
+      }
+
       if (overrideMaterial) child.material = overrideMaterial;
     }
   });
@@ -202,7 +213,9 @@ function fitAssetToBox(
     // centered on the wall's centerline. Shift it so its exterior (-Z) face
     // sits exactly where a standard-thickness panel's exterior face would,
     // letting any extra depth extend inward only.
-    wrapper.position.z = (targetDepth - PANEL_THICKNESS_FT) / 2;
+    // Add small inset (0.02ft ≈ 1/4") to prevent z-fighting with adjacent wall panels
+    const Z_FIGHTING_OFFSET = 0.02;
+    wrapper.position.z = (targetDepth - PANEL_THICKNESS_FT) / 2 + Z_FIGHTING_OFFSET;
   }
 
   wrapper.userData.fittedHeight = effectiveTargetHeight;
