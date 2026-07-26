@@ -595,26 +595,12 @@ function syncStepTrack() {
 // ---------------------------------------------------------------------------
 
 /**
- * Make back wall transparent for interior view
+ * Hide/show back wall for interior view
  */
-function setWallTransparency(transparent) {
+function setBackWallVisibility(visible) {
   coolerRoot.traverse((child) => {
-    if (child.isMesh && child.name && child.name.includes('back')) {
-      if (child.material) {
-        const materials = Array.isArray(child.material) ? child.material : [child.material];
-        materials.forEach((mat) => {
-          if (transparent) {
-            mat.transparent = true;
-            mat.opacity = 0.15;
-            mat.depthWrite = false;
-          } else {
-            mat.transparent = false;
-            mat.opacity = 1.0;
-            mat.depthWrite = true;
-          }
-          mat.needsUpdate = true;
-        });
-      }
+    if (child.name && child.name.includes('back')) {
+      child.visible = visible;
     }
   });
 }
@@ -626,9 +612,11 @@ document.querySelectorAll('.tool-btn[data-view]').forEach((btn) => {
 
     const view = btn.dataset.view;
 
-    // Restore wall opacity when leaving interior view
-    if (view !== 'interior') {
-      setWallTransparency(false);
+    // Show/hide back wall based on view
+    if (view === 'interior') {
+      setBackWallVisibility(false); // Hide back wall for interior view
+    } else {
+      setBackWallVisibility(true);  // Show back wall for all other views
     }
 
     switch (view) {
@@ -642,8 +630,6 @@ document.querySelectorAll('.tool-btn[data-view]').forEach((btn) => {
         await cameraAnimator.animateToSide(CONFIG.width, CONFIG.depth, CONFIG.height);
         break;
       case 'interior':
-        // Make back wall transparent for interior view
-        setWallTransparency(true);
         await cameraAnimator.animateToInterior(CONFIG.width, CONFIG.depth, CONFIG.height);
         break;
       case 'orbit':
