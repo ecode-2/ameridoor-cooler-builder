@@ -546,8 +546,8 @@ export function buildCooler(root, config, materials, assets = {}) {
   const layout = computeDoorLayout(config, width, depth);
 
   // ---- Floor -------------------------------------------------------
-  // Lower floor slightly (0.01ft gap) to prevent z-fighting with door bottoms
-  const FLOOR_OFFSET = 0.01; // Small gap to eliminate visual artifacts in interior view
+  // Lower floor slightly to prevent z-fighting with door bottoms
+  const FLOOR_OFFSET = 0.03; // Small gap (~3/8 inch) to eliminate visual artifacts in interior view
   const floor = new THREE.Mesh(
     new THREE.BoxGeometry(width, PANEL_THICKNESS_FT, depth),
     materials.floor
