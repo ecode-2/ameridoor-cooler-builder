@@ -593,12 +593,44 @@ function syncStepTrack() {
 // ---------------------------------------------------------------------------
 // Viewport toolbar: camera presets with smooth animations
 // ---------------------------------------------------------------------------
+
+/**
+ * Make front wall transparent for interior view
+ */
+function setWallTransparency(transparent) {
+  coolerRoot.traverse((child) => {
+    if (child.isMesh && child.name && child.name.includes('front')) {
+      if (child.material) {
+        const materials = Array.isArray(child.material) ? child.material : [child.material];
+        materials.forEach((mat) => {
+          if (transparent) {
+            mat.transparent = true;
+            mat.opacity = 0.15;
+            mat.depthWrite = false;
+          } else {
+            mat.transparent = false;
+            mat.opacity = 1.0;
+            mat.depthWrite = true;
+          }
+          mat.needsUpdate = true;
+        });
+      }
+    }
+  });
+}
+
 document.querySelectorAll('.tool-btn[data-view]').forEach((btn) => {
   btn.addEventListener('click', async () => {
     document.querySelectorAll('.tool-btn[data-view]').forEach((b) => b.classList.remove('is-active'));
     btn.classList.add('is-active');
 
     const view = btn.dataset.view;
+
+    // Restore wall opacity when leaving interior view
+    if (view !== 'interior') {
+      setWallTransparency(false);
+    }
+
     switch (view) {
       case 'front':
         await cameraAnimator.animateToFront(CONFIG.width, CONFIG.depth, CONFIG.height);
@@ -610,6 +642,8 @@ document.querySelectorAll('.tool-btn[data-view]').forEach((btn) => {
         await cameraAnimator.animateToSide(CONFIG.width, CONFIG.depth, CONFIG.height);
         break;
       case 'interior':
+        // Make front wall transparent for interior view
+        setWallTransparency(true);
         await cameraAnimator.animateToInterior(CONFIG.width, CONFIG.depth, CONFIG.height);
         break;
       case 'orbit':

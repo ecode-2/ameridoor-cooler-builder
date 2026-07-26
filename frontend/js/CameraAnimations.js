@@ -122,10 +122,27 @@ export class CameraAnimations {
 
   /**
    * Preset: Fly inside to show interior (for accessories)
+   * Adaptive positioning based on cooler dimensions
    */
   async animateToInterior(width, depth, height) {
-    const interiorPos = new THREE.Vector3(width * 0.5, height * 0.6, depth * 0.4);
-    const lookAt = new THREE.Vector3(width * 0.7, height * 0.4, depth * 0.6);
+    // Position camera closer to the center for shallow coolers, further back for deep ones
+    // For 8ft depth: 0.25 = 2ft from front
+    // For 20ft+ depth: 0.35 = better coverage
+    const depthRatio = Math.min(0.25 + (depth - 8) * 0.01, 0.35);
+
+    // Position camera slightly off-center and at eye level
+    const interiorPos = new THREE.Vector3(
+      width * 0.3,           // 30% across the width (left of center)
+      height * 0.5,          // Mid-height (eye level)
+      depth * depthRatio     // Adaptive depth positioning
+    );
+
+    // Look toward the back corner to show depth, shelving, and evaporator area
+    const lookAt = new THREE.Vector3(
+      width * 0.7,           // Look toward right side
+      height * 0.4,          // Slightly below eye level
+      depth * 0.7            // Look toward back to show evaporator area
+    );
 
     await this.animateTo(interiorPos, lookAt, 1200, this.easeInOutQuad);
   }
