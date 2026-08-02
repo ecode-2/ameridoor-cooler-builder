@@ -58,7 +58,7 @@ export function createViewport(canvas) {
   scene.add(hemi);
 
   const keyLight = new THREE.DirectionalLight(0xffffff, 1.6);
-  keyLight.position.set(14, 20, -12);
+  keyLight.position.set(-14, 20, 12);
   keyLight.castShadow = true;
   keyLight.shadow.mapSize.set(2048, 2048);
   keyLight.shadow.camera.left = -25;
@@ -69,7 +69,7 @@ export function createViewport(canvas) {
   scene.add(keyLight);
 
   const fillLight = new THREE.DirectionalLight(0xcfe7ea, 0.5);
-  fillLight.position.set(-16, 8, 10);
+  fillLight.position.set(16, 8, -10);
   scene.add(fillLight);
 
   // ---- Ground floor (white to blend with background) -------------------------------------------
