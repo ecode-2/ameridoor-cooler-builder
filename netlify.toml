@@ -1,8 +1,15 @@
 # Netlify configuration for frontend deployment
 [build]
+  # Repo root - overrides a stale "base" directory set in the Netlify UI
+  base = "."
   # No build step needed - static files
   publish = "frontend"
   command = ""
+
+[functions]
+  # Overrides a stale Functions directory setting from the Netlify UI
+  # that was mistakenly pointing at the netlify.toml file itself
+  directory = "netlify/functions"
 
 # Redirect all requests to index.html for SPA routing
 [[redirects]]
