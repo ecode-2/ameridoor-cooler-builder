@@ -28,10 +28,11 @@ export function createViewport(canvas) {
   );
 
   // Set camera further back on mobile for better initial view
+  // Adjusted for 180° model rotation: flipped X and Z signs
   if (isMobile) {
-    camera.position.set(24, 16, -28);
+    camera.position.set(-24, 16, 28);
   } else {
-    camera.position.set(18, 14, -22);
+    camera.position.set(-18, 14, 22);
   }
 
   // ---- Renderer -------------------------------------------------------
@@ -124,7 +125,8 @@ export function frameCameraToBounds(camera, controls, width, depth, height) {
 
   controls.target.copy(center);
 
-  const direction = new THREE.Vector3(1, 0.75, -1.1).normalize();
+  // Direction adjusted for 180° model rotation: flipped X and Z
+  const direction = new THREE.Vector3(-1, 0.75, 1.1).normalize();
   camera.position.copy(center.clone().add(direction.multiplyScalar(radius)));
   controls.update();
 }
@@ -136,9 +138,9 @@ export function setPresetView(camera, controls, preset, width, depth, height) {
   controls.target.copy(center);
 
   const positions = {
-    front: new THREE.Vector3(center.x, center.y, center.z - radius),
+    front: new THREE.Vector3(center.x, center.y, center.z + radius), // Adjusted for 180° model rotation
     top: new THREE.Vector3(center.x, center.y + radius, center.z + 0.001),
-    side: new THREE.Vector3(center.x + radius, center.y, center.z),
+    side: new THREE.Vector3(center.x - radius, center.y, center.z), // Adjusted for 180° model rotation
     orbit: null,
   };
 

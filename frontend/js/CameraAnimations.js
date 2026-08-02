@@ -69,7 +69,8 @@ export class CameraAnimations {
   async animateToFront(width, depth, height) {
     const center = new THREE.Vector3(width / 2, height / 2.2, depth / 2);
     const radius = Math.max(width, depth, height) * 1.6 + 8;
-    const targetPos = new THREE.Vector3(center.x, center.y, center.z - radius);
+    // Adjusted for 180° model rotation: Z position flipped
+    const targetPos = new THREE.Vector3(center.x, center.y, center.z + radius);
 
     await this.animateTo(targetPos, center, 800);
   }
@@ -93,11 +94,12 @@ export class CameraAnimations {
     const center = new THREE.Vector3(width / 2, height / 2.2, depth / 2);
     const radius = Math.max(width, depth, height) * 1.6 + 8;
 
-    // Right side: camera on positive X (looking at right wall from outside)
-    // Left side: camera on negative X (looking at left wall from outside)
+    // Adjusted for 180° model rotation: X positions flipped
+    // Right side: camera on negative X (looking at right wall from outside)
+    // Left side: camera on positive X (looking at left wall from outside)
     const targetPos = side === 'left'
-      ? new THREE.Vector3(center.x - radius, center.y, center.z)
-      : new THREE.Vector3(center.x + radius, center.y, center.z);
+      ? new THREE.Vector3(center.x + radius, center.y, center.z)
+      : new THREE.Vector3(center.x - radius, center.y, center.z);
 
     await this.animateTo(targetPos, center, 800);
   }

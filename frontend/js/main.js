@@ -207,7 +207,11 @@ loadingScreen.incrementProgress('Loading asset library...');
 const loadedAssets = await preloadAssetLibrary();
 
 const coolerRoot = new THREE.Group();
+coolerRoot.rotation.y = Math.PI; // Rotate 180 degrees to show brighter side
 scene.add(coolerRoot);
+
+// After buildCooler is called, we need to update the position to keep centered
+// This will be set in rebuildModel function
 
 // ---------------------------------------------------------------------------
 // Initialize Premium Features
@@ -246,6 +250,12 @@ loadingScreen.incrementProgress('Building initial model...');
 
 function rebuildModel({ reframe = false } = {}) {
   buildCooler(coolerRoot, CONFIG, materials, loadedAssets);
+
+  // Compensate for 180° rotation: reposition to keep centered
+  // After rotation, center shifts from (w/2, h/2, d/2) to (-w/2, h/2, -d/2)
+  // So we translate by (w, 0, d) to bring it back
+  coolerRoot.position.set(CONFIG.width, 0, CONFIG.depth);
+
   if (reframe) frameCameraToBounds(camera, controls, CONFIG.width, CONFIG.depth, CONFIG.height);
   updateSpecReadout();
 }
